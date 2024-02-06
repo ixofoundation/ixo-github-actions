@@ -1,0 +1,94 @@
+name: Build and Publish
+
+on:
+  workflow_call:
+    inputs:
+      image_name:
+        required: true
+        type: string
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [ '18.x' ]
+
+    steps:
+      - name: Map Branch Name to Environment
+        id: branch-mapping
+        run: |
+          case ${{ github.ref }} in
+            refs/heads/develop)
+              echo "new_name=devnet" >> $GITHUB_OUTPUT
+              ;;
+            refs/heads/test)
+              echo "new_name=testnet" >> $GITHUB_OUTPUT
+              ;;
+            refs/heads/main)
+              echo "new_name=mainnet" >> $GITHUB_OUTPUT
+              ;;
+            *)
+              echo "new_name=${GITHUB_REF#refs/heads/}" >> $GITHUB_OUTPUT
+              ;;
+          esac
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Run Build
+        run: yarn build
+
+      - name: Increment package.json Version
+        id: increment-version
+        run: |
+          # Get the current version
+          CURRENT_VERSION=$(node -pe "require('./package.json').version")
+
+          # Split the version into major, minor, and patch components
+          IFS='.' read -ra VERSION_COMPONENTS <<< "$CURRENT_VERSION"
+          MAJOR=${VERSION_COMPONENTS[0]}
+          MINOR=${VERSION_COMPONENTS[1]}
+          PATCH=${VERSION_COMPONENTS[2]}
+
+          # Check if the last digit is 9
+          if [ "$PATCH" = "9" ]; then
+            # Increment the minor version and reset the patch version to 0
+            NEW_VERSION="$MAJOR.$((MINOR + 1)).0"
+          else
+            # Increment the patch version
+            NEW_VERSION="$MAJOR.$MINOR.$((PATCH + 1))"
+          fi
+
+          # Update the version in package.json and commit [skip ci] to prevent this workflow from being called again.
+          npm version "$NEW_VERSION" -m "Increment version to %s [skip ci]"
+          echo "new_version=v$NEW_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Login to GitHub Packages
+        uses: docker/login-action@v2
+        with:
+          registry: docker.pkg.github.com
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/${{ github.repository_name }}:${{ steps.increment-version.outputs.new_version }}-${{ steps.branch-mapping.outputs.new_name }}
+
+      - name: Push Incremented package.json version
+        run: |
+          git push origin HEAD:${{ github.ref }} --follow-tags
