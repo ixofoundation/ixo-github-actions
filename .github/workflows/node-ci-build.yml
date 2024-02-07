@@ -69,5 +69,3 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: ghcr.io/${{ env.IMAGE_NAME }}
-          secrets: |
-            GIT_AUTH_TOKEN=${{ secrets.GITHUB_TOKEN }}
