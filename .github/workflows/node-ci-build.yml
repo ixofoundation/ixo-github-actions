@@ -37,7 +37,7 @@ jobs:
         run: yarn build
 
       - name: Semantic Release
-        run: "npx semantic-release@18 --branches '[\'main\',{name: \'develop\', channel: \'alpha\', prerelease: true},{name: \'test\', channel: \'beta\', prerelease: true}]'"
+        run: npx semantic-release@18
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         
