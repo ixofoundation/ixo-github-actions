@@ -15,7 +15,7 @@ jobs:
       matrix:
         node-version: [ '18.x' ]
     outputs:
-      NEW_TAG: ${{ steps.bump-tag.outputs.new_tag }}
+      NEW_TAG: ${{ steps.tag-version.outputs.NEW_TAG }}
 
     steps:
       - name: Checkout Repository
