@@ -39,23 +39,14 @@ jobs:
       - name: Run Build
         run: yarn build
 
-      - name: Bump version and push tag
-        id: bump-tag
-        uses: anothrNick/github-tag-action@1.64.0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          WITH_V: true
-          RELEASE_BRANCHES: 'master,main'
-          PRERELEASE: true
-          PRERELEASE_SUFFIX: ${{ inputs.current_branch }}
-
-      - name: Sync package.json version
+      - name: Semantic Release
+        run: npx semantic-release
+        
+      - name: Get release tag version
+        id: tag-version
         run: |
-          TAG="${{ steps.bump-tag.outputs.new_tag }}"
-          NEW_VERSION="${TAG#v}"
-          npm version $NEW_VERSION --no-git-tag-version -m "Update package.json version [skip-ci]"
-          echo $(npm version)
-          git push origin HEAD:${{ github.ref }}
+          NEW_TAG=$( git describe --tags "${{ inputs.commit_sha }}")
+          echo "NEW_TAG=$NEW_TAG" >> "$GITHUB_OUTPUT"
   release-docker:
     name: 'Build and Release Docker Image'
     runs-on: ubuntu-latest
