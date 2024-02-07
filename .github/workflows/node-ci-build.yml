@@ -69,4 +69,4 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ env.IMAGE_NAME }}
+            ghrc.io/${{ env.IMAGE_NAME }}
