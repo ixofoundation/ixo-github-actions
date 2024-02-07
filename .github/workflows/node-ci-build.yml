@@ -65,9 +65,9 @@ jobs:
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
-        secrets: |
-          GIT_AUTH_TOKEN=${{ secrets.GITHUB_TOKEN }}
         with:
           file: ./Dockerfile
           push: true
           tags: ghcr.io/${{ env.IMAGE_NAME }}
+          secrets: |
+            GIT_AUTH_TOKEN=${{ secrets.GITHUB_TOKEN }}
