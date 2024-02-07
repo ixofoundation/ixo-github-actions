@@ -38,6 +38,8 @@ jobs:
 
       - name: Semantic Release
         run: npx semantic-release@18
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         
       - name: Get release tag version
         id: tag-version
