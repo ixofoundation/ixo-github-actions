@@ -6,9 +6,6 @@ on:
       commit_sha:
         required: true
         type: string
-      current_branch:
-        required: true
-        type: string
 
 jobs:
   release:
