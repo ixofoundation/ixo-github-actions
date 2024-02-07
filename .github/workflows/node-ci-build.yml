@@ -40,7 +40,7 @@ jobs:
         run: yarn build
 
       - name: Semantic Release
-        run: npx semantic-release
+        run: npx semantic-release@18
         
       - name: Get release tag version
         id: tag-version
