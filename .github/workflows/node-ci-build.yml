@@ -54,6 +54,9 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/develop' #testing
     environment: main
+    steps:
+      - name: Initiating Deployment
+        run: echo 'Initializing...'
   release-docker:
     name: 'Build and Release Docker Image'
     runs-on: ubuntu-latest
