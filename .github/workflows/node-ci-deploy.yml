@@ -38,4 +38,6 @@ jobs:
           chart_name: ${{ github.repository }}
           app_version: ${{ inputs.version }}
           charts_path: charts/${{ inputs.environment }}
+          commit_author: ${{ github.actor }}
+          commit_email: ${{ github.actor }}@users.noreply.github.com
           update_chart_annotations: true
