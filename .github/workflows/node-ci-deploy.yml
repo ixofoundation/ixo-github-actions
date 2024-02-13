@@ -32,7 +32,7 @@ jobs:
       - name: Update helm chart
         uses: shini4i/helm-charts-updater@v1
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ secrets.GHCR_TOKEN }}
           gh_user: ${{ env.HELM_OWNER }}
           gh_repo: ${{ env.HELM_REPO }}
           chart_name: ${{ github.repository }}

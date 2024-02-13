@@ -90,6 +90,7 @@ jobs:
     name: 'Release Helm Chart'
     needs: [release, release-docker, branch-mapping]
     uses: ixofoundation/ixo-github-actions/.github/workflows/node-ci-deploy.yml@main
+    secrets: inherit
     with:
       environment: ${{ needs.branch-mapping.outputs.environment }}
       version: ${{ needs.release.outputs.NEW_TAG }}
