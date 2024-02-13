@@ -69,10 +69,11 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: ghcr.io/${{ env.IMAGE_NAME }}
-  release-helm:
-    name: 'Release Helm Chart'
+  branch-mapping:
+    name: 'Branch to Environment'
     runs-on: ubuntu-latest
-    needs: [release, release-docker]
+    outputs:
+      environment: ${{ steps.environment.outputs.environment }}
     steps:
       - name: Branch Mapping
         id: environment
@@ -85,12 +86,13 @@ jobs:
             echo "::error::Unsupported branch"
             exit 1
           fi
-
-      - name: Deploy Release
-        uses: ixofoundation/ixo-github-actions/.github/workflows/node-ci-deploy.yml@main
-        with:
-          environment: ${{ steps.environment.outputs.environment }}
-          version: ${{ needs.release.outputs.NEW_TAG }}
+  release-helm:
+    name: 'Release Helm Chart'
+    needs: [release, release-docker, branch-mapping]
+    uses: ixofoundation/ixo-github-actions/.github/workflows/node-ci-deploy.yml@main
+    with:
+      environment: ${{ needs.branch-mapping.outputs.environment }}
+      version: ${{ needs.release.outputs.NEW_TAG }}
 # Notes for Deployment
 # TestNet will be deployed using the latest release image ^
 # Main will require deployment review and if approved use the latest release image ^
