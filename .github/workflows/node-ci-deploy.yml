@@ -38,5 +38,4 @@ jobs:
           chart_name: ${{ github.repository }}
           app_version: ${{ inputs.version }}
           charts_path: charts/${{ inputs.environment }}
-          commit_author: ${{ github.actor }}
           update_chart_annotations: true
