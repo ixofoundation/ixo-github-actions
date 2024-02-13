@@ -1,0 +1,42 @@
+name: Deploy Release
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+      version:
+        required: true
+        type: string
+
+jobs:
+  deploy:
+    name: 'Update helm charts'
+    runs-on: ubuntu-latest
+    env:
+      HELM_OWNER: ixofoundation
+      HELM_REPO: ixo-helm-charts
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 'Install Helm'
+        uses: azure/setup-helm@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+        id: install
+
+      - name: Update helm chart
+        uses: shini4i/helm-charts-updater@v1
+        with:
+          github_token: ${{ secrets.GH_TOKEN }}
+          gh_user: ${{ env.HELM_OWNER }}
+          gh_repo: ${{ env.HELM_REPO }}
+          chart_name: ${{ github.repository }}
+          app_version: ${{ inputs.version }}
+          charts_path: charts/${{ inputs.environment }}
+          commit_author: ${{ github.actor }}
+          update_chart_annotations: true
