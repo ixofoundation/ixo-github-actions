@@ -47,7 +47,7 @@ jobs:
       - name: Get release tag version
         id: tag-version
         run: |
-          NEW_TAG=$( git describe --tags --abbrev=0 "${{ inputs.commit_sha }}")
+          NEW_TAG=$( git tag --sort=v:refname | tail -n 1 )
           echo "NEW_TAG=$NEW_TAG" >> "$GITHUB_OUTPUT"
   release-docker:
     name: 'Build and Release Docker Image'
