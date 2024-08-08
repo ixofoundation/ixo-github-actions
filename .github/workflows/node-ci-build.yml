@@ -3,6 +3,10 @@ name: Build and Release
 on:
   workflow_call:
     inputs:
+      skip_ci:
+        required: false
+        type: boolean
+        default: false
       commit_sha:
         required: true
         type: string
@@ -28,16 +32,19 @@ jobs:
           fetch-depth: '0'
 
       - name: Use Node.js ${{ matrix.node-version }}
+        if: ${{ !inputs.skip_ci }}
         uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'yarn'
 
       - name: Install dependencies
+        if: ${{ !inputs.skip_ci }}
         run: yarn install --frozen-lockfile
 
       - name: Run Build
         run: yarn build
+        if: ${{ !inputs.skip_ci }}
 
       - name: Semantic Release
         run: npx semantic-release
