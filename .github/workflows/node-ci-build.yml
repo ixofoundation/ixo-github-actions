@@ -47,11 +47,15 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: ${{ inputs.package_manager }}
 
-      - name: Install dependencies
-        if: ${{ !inputs.skip_ci }}
+      - name: Install dependencies yarn
+        if: ${{ inputs.package_manager == 'yarn' }}
         run: yarn install --frozen-lockfile
 
-      - name: Run Build
+      - name: Install dependencies pnpm
+        if: ${{ inputs.package_manager == 'pnpm' }}
+        run: pnpm install --frozen-lockfile
+
+      - name: Run Build yarn
         run: yarn build
         if: ${{ !inputs.skip_ci }}
 
