@@ -3,6 +3,10 @@ name: Build and Release
 on:
   workflow_call:
     inputs:
+      package_manager:
+        required: false
+        type: string
+        default: 'yarn'
       skip_ci:
         required: false
         type: boolean
@@ -31,11 +35,17 @@ jobs:
           ref: ${{ inputs.commit_sha }}
           fetch-depth: '0'
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        if: ${{ inputs.package_manager == 'pnpm' }}
+        with:
+          version: 6.32.9
+
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node-version }}
-          cache: 'yarn'
+          cache: ${{ inputs.package_manager }}
 
       - name: Install dependencies
         if: ${{ !inputs.skip_ci }}
