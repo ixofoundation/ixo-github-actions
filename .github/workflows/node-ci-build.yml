@@ -55,9 +55,13 @@ jobs:
         if: ${{ inputs.package_manager == 'pnpm' }}
         run: pnpm install --frozen-lockfile
 
+      - name: Run Build pnpm
+        if: ${{ !inputs.skip_ci && inputs.package_manager == 'pnpm' }}
+        run: pnpm build
+
       - name: Run Build yarn
         run: yarn build
-        if: ${{ !inputs.skip_ci }}
+        if: ${{ !inputs.skip_ci && inputs.package_manager == 'yarn' }}
 
       - name: Semantic Release
         run: npx semantic-release
