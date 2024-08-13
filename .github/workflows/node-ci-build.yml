@@ -104,7 +104,7 @@ jobs:
         run: |
           if [ "${{ github.ref }}" = "refs/heads/develop" ]; then
             echo "environment=devnet" >> "$GITHUB_OUTPUT"
-          elif [ "${{ github.ref }}" = "refs/heads/main" ]; then
+          elif [ "${{ github.ref }}" = "refs/heads/main" ] || [ "${{ github.ref }}" = "refs/heads/master" ]; then
             echo "environment=testnet" >> "$GITHUB_OUTPUT"
           else
             echo "::error::Unsupported branch"
