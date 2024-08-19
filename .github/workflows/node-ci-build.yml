@@ -72,7 +72,12 @@ jobs:
       - name: Get release tag version
         id: tag-version
         run: |
-          NEW_TAG=$( git tag --sort=v:refname | tail -n 1 )
+          # Fetch the latest tag
+          LATEST_TAG=$(git tag --sort=v:refname | tail -n 1)
+    
+          # Remove the '-develop.<number>' suffix if it exists
+          NEW_TAG=$(echo "$LATEST_TAG" | sed -E 's/-develop\.[0-9]+$//')
+          
           echo "NEW_TAG=$NEW_TAG" >> "$GITHUB_OUTPUT"
   release-docker:
     name: 'Build and Release Docker Image'
