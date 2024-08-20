@@ -21,7 +21,7 @@ permissions:
 jobs:
   release:
     name: 'Semantic Release NodeJS'
-    runs-on: ubuntu-latest
+    runs-on: buildjet-4vcpu-ubuntu-2204
     strategy:
       matrix:
         node-version: [ '18.x' ]
@@ -92,7 +92,7 @@ jobs:
 
   release-docker:
     name: 'Build and Release Docker Image'
-    runs-on: ubuntu-latest
+    runs-on: buildjet-4vcpu-ubuntu-2204
     needs: release
     env:
       IMAGE_NAME: ${{ github.repository }}:${{ needs.release.outputs.NEW_TAG }}
@@ -112,7 +112,7 @@ jobs:
           tags: ghcr.io/${{ env.IMAGE_NAME }}
   branch-mapping:
     name: 'Branch to Environment'
-    runs-on: ubuntu-latest
+    runs-on: buildjet-4vcpu-ubuntu-2204
     outputs:
       environment: ${{ steps.environment.outputs.environment }}
     steps:
