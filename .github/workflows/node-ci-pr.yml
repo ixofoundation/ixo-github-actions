@@ -1,12 +1,46 @@
 name: Node.js CI PR
 on:
   workflow_call:
+    inputs:
+      package_manager:
+        required: false
+        type: string
+        default: 'yarn'
 
 jobs:
-  build:
-
+  build-pnpm:
     name: Node.js Build and Test
-    runs-on: ubuntu-latest
+    runs-on: buildjet-4vcpu-ubuntu-2204
+    if: ${{ inputs.package_manager == 'pnpm' }}
+    strategy:
+      matrix:
+        node-version: [ '18.x' ]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9.0
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: ${{ inputs.package_manager }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run Build
+        run: pnpm build
+
+#     - TODO TEST
+  build-yarn:
+    name: Node.js Build and Test
+    runs-on: buildjet-4vcpu-ubuntu-2204
+    if: ${{ inputs.package_manager == 'yarn' }}
     strategy:
       matrix:
         node-version: ['18.x']
