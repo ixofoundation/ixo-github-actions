@@ -1,0 +1,37 @@
+name: Build and Release
+
+on:
+  workflow_call:
+
+
+
+
+jobs:
+  release:
+    permissions:
+      contents: write
+      packages: write
+      pull-requests: write
+    timeout-minutes: 20
+    runs-on: buildjet-4vcpu-ubuntu-2204
+    steps:
+      - name: "Checkout Repository"
+        uses: actions/checkout@v3
+
+      - name: "Setup Node 18.x"
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18.x
+
+      - name: "Install dependencies"
+        run: pnpm install --frozen-lockfile
+
+      - name: "Create Release Pull Request or Publish to npm"
+        uses: changesets/action@v1
+        with:
+          publish: pnpm run release
+          version: pnpm run version
+          commit: "chore: new release"
+          title: "chore: new release candidate"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
