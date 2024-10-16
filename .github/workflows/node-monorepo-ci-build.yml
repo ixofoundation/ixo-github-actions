@@ -3,9 +3,6 @@ name: Build and Release
 on:
   workflow_call:
 
-
-
-
 jobs:
   release:
     permissions:
