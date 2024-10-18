@@ -27,7 +27,7 @@ jobs:
         uses: changesets/action@v1
         with:
           version: pnpm run version
-          publish: ''
+          publish: 'echo "skipping publish"'
           commit: "chore: new release"
           title: "chore: new release candidate"
           createGithubReleases: 'true'
