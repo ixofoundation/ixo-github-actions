@@ -4,13 +4,35 @@ on:
   workflow_call:
 
 jobs:
+  branch-mapping:
+    name: 'Branch to Environment'
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.environment.outputs.environment }}
+    steps:
+      - name: Branch Mapping
+        id: environment
+        run: |
+          if [ "${{ github.ref }}" = "refs/heads/develop" ]; then
+            echo "environment=devnet" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.ref }}" = "refs/heads/main" ] || [ "${{ github.ref }}" = "refs/heads/master" ]; then
+            echo "environment=testnet" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::Unsupported branch"
+            exit 1
+          fi
+  # We create a PR Release if there is a changesets file. if there is no changesets file and a package.json version is updated (e.g. merged PR), it is a Release.
   release:
+    name: "[Create PR Release] OR [Create Github Tags & Release]"
     permissions:
       contents: write
       packages: write
       pull-requests: write
     timeout-minutes: 20
     runs-on: ubuntu-latest
+    outputs:
+      published: ${{ steps.changeset.outputs.published }}
+      publishedPackages: ${{ steps.changeset.outputs.publishedPackages }}
     steps:
       - name: "Checkout Repository"
         uses: actions/checkout@v3
@@ -24,6 +46,7 @@ jobs:
         run: pnpm install --no-frozen-lockfile
 
       - name: "Create Release Pull Request"
+        id: changeset
         uses: changesets/action@v1
         with:
           version: pnpm run version
@@ -33,3 +56,44 @@ jobs:
           createGithubReleases: 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  release-docker:
+    name: 'Build and Release Docker Image(s)'
+    runs-on: buildjet-4vcpu-ubuntu-2204
+    needs: release
+    if: needs.release.outputs.published == 'true'
+    strategy:
+      matrix:
+        package: ${{ fromJSON(needs.release.outputs.publishedPackages) }}
+    env:
+      IMAGE_NAME: ghcr.io/${{ github.repository }}/${{ matrix.package.name }}
+      IMAGE_TAG: ${{ matrix.package.version }}
+    steps:
+      - name: Login to GitHub Packages
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          file: ./Dockerfile
+          build-args: |
+            PROJECT=${{ matrix.package.name }}
+          push: true
+          tags: |
+            ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+            ${{ env.IMAGE_NAME }}:latest
+  deploy:
+    name: 'Release Helm Chart(s)'
+    needs: [ release, release-docker, branch-mapping ]
+    uses: ixofoundation/ixo-github-actions/.github/workflows/node-ci-deploy.yml@main
+    strategy:
+      matrix:
+        package: ${{ fromJSON(needs.release.outputs.publishedPackages) }}
+    secrets: inherit
+    with:
+      environment: ${{ needs.branch-mapping.outputs.environment }}
+      version: ${{ matrix.package.version }}
+      chartName: ${{ matrix.package.name }}

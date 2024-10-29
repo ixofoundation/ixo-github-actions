@@ -9,6 +9,10 @@ on:
       version:
         required: true
         type: string
+      chartName:
+        required: false
+        default: ''
+        type: string
 
 jobs:
   deploy:
@@ -35,7 +39,7 @@ jobs:
           github_token: ${{ secrets.GHCR_TOKEN }}
           gh_user: ${{ env.HELM_OWNER }}
           gh_repo: ${{ env.HELM_REPO }}
-          chart_name: ${{ github.repository }}
+          chart_name: ${{ inputs.chartName != '' && inputs.chartName || github.repository }}
           app_version: ${{ inputs.version }}
           charts_path: charts/${{ inputs.environment }}
           commit_author: ${{ github.actor }}
