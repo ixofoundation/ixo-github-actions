@@ -9,6 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       environment: ${{ steps.environment.outputs.environment }}
+      repository: ${{ steps.set-repository.outputs.repository }}
     steps:
       - name: Branch Mapping
         id: environment
@@ -21,6 +22,13 @@ jobs:
             echo "::error::Unsupported branch"
             exit 1
           fi
+
+      - name: Repository Name
+        id: set-repository
+        run: |
+          repo_name="${{ github.repository }}"
+          repo_name_only="${repo_name#*/}"  # Remove owner (before and including '/')
+          echo "repository=${repo_name_only}" >> "$GITHUB_OUTPUT"
   # We create a PR Release if there is a changesets file. if there is no changesets file and a package.json version is updated (e.g. merged PR), it is a Release.
   release:
     name: "[Create PR Release] OR [Create Github Tags & Release]"
@@ -32,7 +40,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       published: ${{ steps.changeset.outputs.published }}
-      publishedPackages: ${{ steps.changeset.outputs.publishedPackages }}
+      publishedPackages: ${{ steps.clean_packages.outputs.cleanedPackages }}
     steps:
       - name: "Checkout Repository"
         uses: actions/checkout@v3
@@ -56,6 +64,12 @@ jobs:
           createGithubReleases: 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: "Set Published Packages Without '@'"
+        id: clean_packages
+        run: |
+          cleaned_packages=$(echo "${{ steps.changeset.outputs.publishedPackages }}" | jq 'map(.name | gsub("@"; ""))')
+          echo "cleanedPackages=$cleaned_packages" >> "$GITHUB_OUTPUT"
   release-docker:
     name: 'Build and Release Docker Image(s)'
     runs-on: buildjet-4vcpu-ubuntu-2204
@@ -96,4 +110,4 @@ jobs:
     with:
       environment: ${{ needs.branch-mapping.outputs.environment }}
       version: ${{ matrix.package.version }}
-      chartName: ${{ matrix.package.name }}
+      chartName: ${{ needs.branch-mapping.outputs.repository }}-${{ matrix.package.name }}
