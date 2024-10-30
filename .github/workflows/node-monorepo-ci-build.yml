@@ -64,12 +64,6 @@ jobs:
           createGithubReleases: 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: "Set Published Packages Without '@'"
-        id: clean_packages
-        run: |
-          cleaned_packages=$(echo "${{ steps.changeset.outputs.publishedPackages }}" | jq 'map(.name | gsub("@"; ""))')
-          echo "cleanedPackages=$cleaned_packages" >> "$GITHUB_OUTPUT"
   release-docker:
     name: 'Build and Release Docker Image(s)'
     runs-on: buildjet-4vcpu-ubuntu-2204
