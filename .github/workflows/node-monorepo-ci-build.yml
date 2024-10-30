@@ -104,4 +104,4 @@ jobs:
     with:
       environment: ${{ needs.branch-mapping.outputs.environment }}
       version: ${{ matrix.package.version }}
-      chartName: ${{ needs.branch-mapping.outputs.repository }}-${{ matrix.package.name }}
+      chartName: ${{ github.repository_owner }}/${{ needs.branch-mapping.outputs.repository }}-${{ matrix.package.name }}
