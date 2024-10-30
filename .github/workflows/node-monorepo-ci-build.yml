@@ -40,7 +40,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       published: ${{ steps.changeset.outputs.published }}
-      publishedPackages: ${{ steps.clean_packages.outputs.cleanedPackages }}
+      publishedPackages: ${{ steps.changeset.outputs.publishedPackages }}
     steps:
       - name: "Checkout Repository"
         uses: actions/checkout@v3
