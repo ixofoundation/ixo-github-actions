@@ -85,10 +85,24 @@ jobs:
           tags: |
             ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
             ${{ env.IMAGE_NAME }}:latest
+  deploy-ixoworld-workaround:
+    name: 'Release Helm Chart(s)'
+    needs: [ release, release-docker, branch-mapping ]
+    if: github.repository_owner == 'ixoworld'
+    uses: ixoworld/ixo-github-actions/.github/workflows/node-ci-deploy.yml@main
+    strategy:
+      matrix:
+        package: ${{ fromJSON(needs.release.outputs.publishedPackages) }}
+    secrets: inherit
+    with:
+      environment: ${{ needs.branch-mapping.outputs.environment }}
+      version: ${{ matrix.package.version }}
+      chartName: ${{ github.repository }}-${{ matrix.package.name }}
   deploy:
     name: 'Release Helm Chart(s)'
     needs: [ release, release-docker, branch-mapping ]
-    uses: ${{ github.repository_owner }}/ixo-github-actions/.github/workflows/node-ci-deploy.yml@main
+    if: github.repository.owner == 'ixofoundation'
+    uses: ixofoundation/ixo-github-actions/.github/workflows/node-ci-deploy.yml@main
     strategy:
       matrix:
         package: ${{ fromJSON(needs.release.outputs.publishedPackages) }}
