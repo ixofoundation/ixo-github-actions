@@ -61,7 +61,7 @@ jobs:
       - name: "Filter packages to exclude those starting with @"
         id: filter_packages
         run: |
-          echo "${{ steps.changeset.outputs.published }}" | jq '[.[] | select(.name | startswith("@") | not)]' > filtered-packages.json
+          echo "${{ steps.changeset.outputs.publishedPackages }}" | jq '[.[] | select(.name | startswith("@") | not)]' > filtered-packages.json
           cat filtered-packages.json
           echo "filteredPackages=$(cat filtered-packages.json)" >> $GITHUB_OUTPUT
 
