@@ -51,7 +51,7 @@ jobs:
     if: ${{ needs.validate-commit.outputs.is_merge_commit == 'false' }}
     strategy:
       matrix:
-        node-version: [ ${{ inputs.node_version }} ]
+        node-version: [ "${{ inputs.node_version }}" ]
     outputs:
       NEW_TAG: ${{ steps.tag-version-non-develop.outputs.NEW_TAG || steps.tag-version-develop.outputs.NEW_TAG }}
 
