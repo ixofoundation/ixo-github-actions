@@ -162,9 +162,19 @@ jobs:
             echo "::error::Unsupported branch"
             exit 1
           fi
+  release-ixoworld-workaround:
+    name: 'Release Helm Chart(s)'
+    needs: [ release, release-docker, branch-mapping ]
+    if: github.repository_owner == 'ixoworld'
+    uses: ixoworld/ixo-github-actions/.github/workflows/node-ci-deploy.yml@main
+    secrets: inherit
+    with:
+      environment: ${{ needs.branch-mapping.outputs.environment }}
+      version: ${{ matrix.package.version }}
   release-helm:
     name: 'Release Helm Chart'
     needs: [release, release-docker, branch-mapping]
+    if: github.repository.owner == 'ixofoundation'
     uses: ixofoundation/ixo-github-actions/.github/workflows/node-ci-deploy.yml@main
     secrets: inherit
     with:
