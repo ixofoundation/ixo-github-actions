@@ -25,7 +25,8 @@ permissions:
 jobs:
   validate-commit:
     name: 'Validate Commit'
-    runs-on: buildjet-4vcpu-ubuntu-2204
+    #runs-on: buildjet-4vcpu-ubuntu-2204
+    runs-on: ubuntu-latest
     outputs:
       is_merge_commit: ${{ steps.check_merge_commit.outputs.is_merge_commit }}
     steps:
@@ -46,7 +47,8 @@ jobs:
           fi
   release:
     name: 'Semantic Release NodeJS'
-    runs-on: buildjet-4vcpu-ubuntu-2204
+    #runs-on: buildjet-4vcpu-ubuntu-2204
+    runs-on: ubuntu-latest
     needs: validate-commit
     if: ${{ needs.validate-commit.outputs.is_merge_commit == 'false' }}
     strategy:
@@ -127,7 +129,8 @@ jobs:
 
   release-docker:
     name: 'Build and Release Docker Image'
-    runs-on: buildjet-4vcpu-ubuntu-2204
+    #runs-on: buildjet-4vcpu-ubuntu-2204
+    runs-on: ubuntu-latest
     needs: release
     env:
       IMAGE_NAME: ${{ github.repository }}:${{ needs.release.outputs.NEW_TAG }}
@@ -147,7 +150,8 @@ jobs:
           tags: ghcr.io/${{ env.IMAGE_NAME }}
   branch-mapping:
     name: 'Branch to Environment'
-    runs-on: buildjet-4vcpu-ubuntu-2204
+    #runs-on: buildjet-4vcpu-ubuntu-2204
+    runs-on: ubuntu-latest
     outputs:
       environment: ${{ steps.environment.outputs.environment }}
     steps:

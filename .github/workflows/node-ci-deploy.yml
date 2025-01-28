@@ -17,7 +17,8 @@ on:
 jobs:
   deploy:
     name: 'Update helm charts'
-    runs-on: buildjet-4vcpu-ubuntu-2204
+    #runs-on: buildjet-4vcpu-ubuntu-2204
+    runs-on: ubuntu-latest
     env:
       HELM_OWNER: ixofoundation
       HELM_REPO: ixo-helm-charts
