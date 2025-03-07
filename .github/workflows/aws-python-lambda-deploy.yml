@@ -1,0 +1,45 @@
+name: Deploy Python Lambda
+
+on:
+  workflow_call:
+    inputs:
+      python_version:
+        required: true
+        type: string
+      aws_function_name:
+        required: true
+        type: string
+      aws_region:
+        required: false
+        type: string
+        default: 'eu-north-1'
+
+jobs:
+  deploy:
+    name: Deploy Lambda
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ inputs.python_version }}
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt -t .
+
+      - name: Package Lambda function
+        run: zip -r lambda.zip .
+
+      - name: Deploy to AWS Lambda
+        uses: aws-actions/aws-lambda-deploy@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ inputs.aws_region }}
+          function-name: ${{ inputs.aws_function_name }}
+          zip-file: lambda.zip
