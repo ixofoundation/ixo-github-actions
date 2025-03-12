@@ -178,7 +178,7 @@ jobs:
   release-helm:
     name: 'Release Helm Chart'
     needs: [release, release-docker, branch-mapping]
-    if: github.repository.owner == 'ixofoundation'
+    if: github.repository_owner == 'ixofoundation'
     uses: ixofoundation/ixo-github-actions/.github/workflows/node-ci-deploy.yml@main
     secrets: inherit
     with:
