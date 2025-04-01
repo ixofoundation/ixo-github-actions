@@ -123,7 +123,7 @@ jobs:
         id: tag-version-develop
         run: |
           # Fetch the latest tag
-          LATEST_TAG=$(git tag --sort=v:refname | tail -n 1)
+          LATEST_TAG=$(git tag --sort=v:refname | grep 'develop' | tail -n 1)
           
           echo "NEW_TAG=$LATEST_TAG" >> "$GITHUB_OUTPUT"
 
