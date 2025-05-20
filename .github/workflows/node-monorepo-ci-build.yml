@@ -66,9 +66,16 @@ jobs:
       matrix:
         package: ${{ fromJSON(needs.release.outputs.publishedPackages) }}
     env:
-      IMAGE_NAME: ghcr.io/${{ github.repository }}/${{ matrix.package.name }}
       IMAGE_TAG: ${{ matrix.package.version }}
     steps:
+      - name: Set image name
+        id: set-image-name
+        run: |
+          PACKAGE_NAME="${{ matrix.package.name }}"
+          FORMATTED_NAME="${PACKAGE_NAME//@/}"
+          FORMATTED_NAME="${FORMATTED_NAME//\//-}"
+          echo "image_name=ghcr.io/${{ github.repository }}/${FORMATTED_NAME}" >> $GITHUB_OUTPUT
+
       - name: Login to GitHub Packages
         uses: docker/login-action@v3
         with:
@@ -84,7 +91,7 @@ jobs:
             PROJECT=${{ matrix.package.name }}
           push: true
           tags: |
-            ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+            ${{ steps.set-image-name.outputs.image_name }}:${{ env.IMAGE_TAG }}
             ${{ env.IMAGE_NAME }}:latest
   deploy-ixoworld-workaround:
     name: 'Release Helm Chart(s)'
