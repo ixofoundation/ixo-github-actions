@@ -131,7 +131,7 @@ jobs:
           done
           
           # Read the final JSON array
-          DEPLOYABLE_PACKAGES=$(cat deployable.json)
+          DEPLOYABLE_PACKAGES=$(cat deployable.json | jq -c .)
           
           # Output the deployable packages as JSON
           echo "deployable_packages=$DEPLOYABLE_PACKAGES" >> $GITHUB_OUTPUT
