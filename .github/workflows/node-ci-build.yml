@@ -178,11 +178,11 @@ jobs:
           severity: 'CRITICAL,HIGH'
           exit-code: '0'  # Fail if critical/high vulnerabilities found (currently will not fail - set to exit code 0)
 
-      - name: Upload Trivy scan results to GitHub Security tab # Populate to Github
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
-        with:
-          sarif_file: 'trivy-results.sarif'
+      # - name: Upload Trivy scan results to GitHub Security tab # Populate to Github, TODO look into if this is needed
+      #   uses: github/codeql-action/upload-sarif@v3
+      #   if: always()
+      #   with:
+      #     sarif_file: 'trivy-results.sarif'
 
       - name: Run Trivy vulnerability scanner for readable output # Readable from Logs
         uses: aquasecurity/trivy-action@0.31.0
