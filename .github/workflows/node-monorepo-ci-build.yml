@@ -185,7 +185,7 @@ jobs:
   deploy-ixoworld-workaround:
     name: 'Release Helm Chart(s)'
     needs: [ release, release-docker, security-scan, branch-mapping, filter-packages ]
-    if: github.repository_owner == 'ixoworld' && needs.filter-packages.outputs.deployable_packages != '[]' && (always() && (needs.security-scan.result == 'success' || needs.security-scan.result == 'skipped'))
+    if: github.repository_owner == 'ixoworld' && needs.filter-packages.result == 'success' && needs.filter-packages.outputs.deployable_packages != '[]' && (always() && (needs.security-scan.result == 'success' || needs.security-scan.result == 'skipped'))
     uses: ixoworld/ixo-github-actions/.github/workflows/node-ci-deploy.yml@main
     strategy:
       matrix:
@@ -198,7 +198,7 @@ jobs:
   deploy:
     name: 'Release Helm Chart(s)'
     needs: [ release, release-docker, security-scan, branch-mapping, filter-packages ]
-    if: github.repository.owner == 'ixofoundation' && needs.filter-packages.outputs.deployable_packages != '[]' && (always() && (needs.security-scan.result == 'success' || needs.security-scan.result == 'skipped'))
+    if: github.repository.owner == 'ixofoundation' && needs.filter-packages.result == 'success' && needs.filter-packages.outputs.deployable_packages != '[]' && (always() && (needs.security-scan.result == 'success' || needs.security-scan.result == 'skipped'))
     uses: ixofoundation/ixo-github-actions/.github/workflows/node-ci-deploy.yml@main
     strategy:
       matrix:
