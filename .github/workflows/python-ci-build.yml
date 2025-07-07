@@ -15,6 +15,10 @@ on:
         required: false
         type: boolean
         default: true
+      skip_security_scan:
+        required: false
+        type: boolean
+        default: true
       commit_sha:
         required: true
         type: string
@@ -82,7 +86,9 @@ jobs:
           if [ "${{ inputs.skip_tests }}" = "false" ]; then
             uv run pytest || if [ $? -eq 5 ]; then echo "No tests found"; else exit $?; fi
           fi
-          uv run bandit -r . -f json -o bandit-report.json
+          if [ "${{ inputs.skip_security_scan }}" = "false" ]; then
+            uv run bandit -r . -f json -o bandit-report.json
+          fi
 
   build-and-publish:
     name: 'Build and Publish'
