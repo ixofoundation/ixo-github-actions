@@ -163,6 +163,13 @@ jobs:
     needs: build-and-publish
     if: ${{ inputs.docker_image_scanning && always() && needs.build-and-publish.result == 'success' }}
     steps:
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_TOKEN }}
+
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
@@ -175,6 +182,44 @@ jobs:
         if: always()
         with:
           sarif_file: 'trivy-results.sarif'
+
+  branch-mapping:
+    name: 'Branch to Environment'
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.environment.outputs.environment }}
+    steps:
+      - name: Branch Mapping
+        id: environment
+        run: |
+          if [ "${{ github.ref }}" = "refs/heads/develop" ]; then
+            echo "environment=devnet" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.ref }}" = "refs/heads/main" ] || [ "${{ github.ref }}" = "refs/heads/master" ]; then
+            echo "environment=testnet" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::Unsupported branch"
+            exit 1
+          fi
+
+  release-ixoworld-workaround:
+    name: 'Release Helm Chart(s)'
+    needs: [build-and-publish, scan-image, branch-mapping]
+    if: github.repository_owner == 'ixoworld' && (always() && (needs.scan-image.result == 'success' || needs.scan-image.result == 'skipped'))
+    uses: ixoworld/ixo-github-actions/.github/workflows/node-ci-deploy.yml@main
+    secrets: inherit
+    with:
+      environment: ${{ needs.branch-mapping.outputs.environment }}
+      version: ${{ needs.build-and-publish.outputs.image_tag }}
+
+  release-helm:
+    name: 'Release Helm Chart'
+    needs: [build-and-publish, scan-image, branch-mapping]
+    if: github.repository_owner == 'ixofoundation' && (always() && (needs.scan-image.result == 'success' || needs.scan-image.result == 'skipped'))
+    uses: ixofoundation/ixo-github-actions/.github/workflows/node-ci-deploy.yml@main
+    secrets: inherit
+    with:
+      environment: ${{ needs.branch-mapping.outputs.environment }}
+      version: ${{ needs.build-and-publish.outputs.image_tag }}
 
 # Notes for Deployment
 # TestNet will be deployed using the latest release image ^
