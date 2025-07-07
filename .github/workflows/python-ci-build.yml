@@ -102,7 +102,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.commit_sha }}
+          fetch-depth: 0
 
       - name: Set up Python ${{ inputs.python_version }}
         uses: actions/setup-python@v5
