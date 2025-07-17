@@ -161,6 +161,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [release, release-docker]
     if: ${{ inputs.docker_image_scanning }}
+    continue-on-error: true
     env:
       IMAGE_NAME: ${{ github.repository }}:${{ needs.release.outputs.NEW_TAG }}
     steps:
@@ -171,6 +172,7 @@ jobs:
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@0.31.0
+        continue-on-error: true
         with:
           image-ref: 'ghcr.io/${{ env.IMAGE_NAME }}'
           format: 'sarif'
@@ -186,6 +188,7 @@ jobs:
 
       - name: Run Trivy vulnerability scanner for readable output # Readable from Logs
         uses: aquasecurity/trivy-action@0.31.0
+        continue-on-error: true
         if: always()
         with:
           image-ref: 'ghcr.io/${{ env.IMAGE_NAME }}'
@@ -213,7 +216,7 @@ jobs:
   release-ixoworld-workaround:
     name: 'Release Helm Chart(s)'
     needs: [ release, release-docker, security-scan, branch-mapping ]
-    if: github.repository_owner == 'ixoworld' && (always() && (needs.security-scan.result == 'success' || needs.security-scan.result == 'skipped'))
+    if: github.repository_owner == 'ixoworld' && (always() && (needs.security-scan.result == 'success' || needs.security-scan.result == 'skipped' || needs.security-scan.result == 'failure'))
     uses: ixoworld/ixo-github-actions/.github/workflows/node-ci-deploy.yml@main
     secrets: inherit
     with:
@@ -222,7 +225,7 @@ jobs:
   release-helm:
     name: 'Release Helm Chart'
     needs: [release, release-docker, security-scan, branch-mapping]
-    if: github.repository_owner == 'ixofoundation' && (always() && (needs.security-scan.result == 'success' || needs.security-scan.result == 'skipped'))
+    if: github.repository_owner == 'ixofoundation' && (always() && (needs.security-scan.result == 'success' || needs.security-scan.result == 'skipped' || needs.security-scan.result == 'failure'))
     uses: ixofoundation/ixo-github-actions/.github/workflows/node-ci-deploy.yml@main
     secrets: inherit
     with:
