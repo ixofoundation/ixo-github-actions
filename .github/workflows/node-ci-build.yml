@@ -6,7 +6,7 @@ on:
       node_version:
         required: false
         type: string
-        default: '18.x'
+        default: '22.17.0'
       package_manager:
         required: false
         type: string
