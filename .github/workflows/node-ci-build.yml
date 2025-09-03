@@ -40,7 +40,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
-          token: ${{ secrets.GHCR_TOKEN }}
+          token: ${{ secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}
           ref: ${{ inputs.commit_sha }}
 
       - name: Check if commit is a merge from main/master to develop
@@ -69,7 +69,7 @@ jobs:
         with:
           ref: ${{ inputs.commit_sha }}
           fetch-depth: '0'
-          token: ${{ secrets.GHCR_TOKEN }}
+          token: ${{ secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v2
