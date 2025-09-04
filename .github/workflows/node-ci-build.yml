@@ -205,7 +205,7 @@ jobs:
       - name: Branch Mapping
         id: environment
         run: |
-          if [ "${{ github.ref }}" = "refs/heads/develop" ]; then
+          if [ "${{ github.ref }}" = "refs/heads/develop" ] || [ "${{ github.ref }}" = "refs/heads/dev" ]; then
             echo "environment=devnet" >> "$GITHUB_OUTPUT"
           elif [ "${{ github.ref }}" = "refs/heads/main" ] || [ "${{ github.ref }}" = "refs/heads/master" ]; then
             echo "environment=testnet" >> "$GITHUB_OUTPUT"
