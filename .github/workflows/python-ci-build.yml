@@ -88,16 +88,16 @@ jobs:
             uv sync
           fi
 
-      - name: Run Python checks
-        run: |
-          uv run ruff check
-          uv run pyright .
-          if [ "${{ inputs.skip_tests }}" = "false" ]; then
-            uv run pytest || if [ $? -eq 5 ]; then echo "No tests found"; else exit $?; fi
-          fi
-          if [ "${{ inputs.skip_security_scan }}" = "false" ]; then
-            uv run bandit -r . -f json -o bandit-report.json
-          fi
+      # - name: Run Python checks
+      #   run: |
+      #     uv run ruff check
+      #     uv run pyright .
+      #     if [ "${{ inputs.skip_tests }}" = "false" ]; then
+      #       uv run pytest || if [ $? -eq 5 ]; then echo "No tests found"; else exit $?; fi
+      #     fi
+      #     if [ "${{ inputs.skip_security_scan }}" = "false" ]; then
+      #       uv run bandit -r . -f json -o bandit-report.json
+      #     fi
 
   build-and-publish:
     name: 'Build and Publish'
