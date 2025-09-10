@@ -221,7 +221,7 @@ jobs:
   release-ixoworld-workaround:
     name: 'Release Helm Chart(s)'
     needs: [build-and-publish, scan-image, branch-mapping]
-    if: github.repository_owner == 'ixoworld' && (always() && (needs.scan-image.result == 'success' || needs.scan-image.result == 'skipped' || needs.scan-image.result == 'failure'))
+    if: github.repository_owner == 'ixoworld' && (always() && needs.build-and-publish.result == 'success' && (needs.scan-image.result == 'success' || needs.scan-image.result == 'skipped' || needs.scan-image.result == 'failure'))
     uses: ixoworld/ixo-github-actions/.github/workflows/node-ci-deploy.yml@main
     secrets: inherit
     with:
@@ -231,7 +231,7 @@ jobs:
   release-helm:
     name: 'Release Helm Chart'
     needs: [build-and-publish, scan-image, branch-mapping]
-    if: github.repository_owner == 'ixofoundation' && (always() && (needs.scan-image.result == 'success' || needs.scan-image.result == 'skipped' || needs.scan-image.result == 'failure'))
+    if: github.repository_owner == 'ixofoundation' && (always() && needs.build-and-publish.result == 'success' && (needs.scan-image.result == 'success' || needs.scan-image.result == 'skipped' || needs.scan-image.result == 'failure'))
     uses: ixofoundation/ixo-github-actions/.github/workflows/node-ci-deploy.yml@main
     secrets: inherit
     with:

@@ -216,7 +216,7 @@ jobs:
   release-ixoworld-workaround:
     name: 'Release Helm Chart(s)'
     needs: [ release, release-docker, security-scan, branch-mapping ]
-    if: github.repository_owner == 'ixoworld' && (always() && (needs.security-scan.result == 'success' || needs.security-scan.result == 'skipped' || needs.security-scan.result == 'failure'))
+    if: github.repository_owner == 'ixoworld' && (always() && needs.release.result == 'success' && needs.release-docker.result == 'success' && (needs.security-scan.result == 'success' || needs.security-scan.result == 'skipped' || needs.security-scan.result == 'failure'))
     uses: ixoworld/ixo-github-actions/.github/workflows/node-ci-deploy.yml@main
     secrets: inherit
     with:
@@ -225,7 +225,7 @@ jobs:
   release-helm:
     name: 'Release Helm Chart'
     needs: [release, release-docker, security-scan, branch-mapping]
-    if: github.repository_owner == 'ixofoundation' && (always() && (needs.security-scan.result == 'success' || needs.security-scan.result == 'skipped' || needs.security-scan.result == 'failure'))
+    if: github.repository_owner == 'ixofoundation' && (always() && needs.release.result == 'success' && needs.release-docker.result == 'success' && (needs.security-scan.result == 'success' || needs.security-scan.result == 'skipped' || needs.security-scan.result == 'failure'))
     uses: ixofoundation/ixo-github-actions/.github/workflows/node-ci-deploy.yml@main
     secrets: inherit
     with:
