@@ -10,6 +10,18 @@ on:
         required: false
         type: string
         default: '22.17.0'
+      run_lint:
+        required: false
+        type: boolean
+        default: false
+      run_test:
+        required: false
+        type: boolean
+        default: false
+      run_type_check:
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   build-pnpm:
@@ -40,7 +52,17 @@ jobs:
       - name: Run Build
         run: pnpm build
 
-      # - TODO pnpm TEST
+      - name: Run Lint
+        if: ${{ inputs.run_lint }}
+        run: pnpm lint
+
+      - name: Run Test
+        if: ${{ inputs.run_test }}
+        run: pnpm test
+
+      - name: Run Type Check
+        if: ${{ inputs.run_type_check }}
+        run: pnpm type-check
   build-npm:
     name: Node.js Build and Test
     runs-on: buildjet-4vcpu-ubuntu-2204
@@ -64,8 +86,17 @@ jobs:
       - name: Run Build
         run: npm run build
 
-    # - name: Run Test
-    #   run: npm run test
+      - name: Run Lint
+        if: ${{ inputs.run_lint }}
+        run: npm run lint
+
+      - name: Run Test
+        if: ${{ inputs.run_test }}
+        run: npm run test
+
+      - name: Run Type Check
+        if: ${{ inputs.run_type_check }}
+        run: npm run type-check
   build-yarn:
     name: Node.js Build and Test
     runs-on: buildjet-4vcpu-ubuntu-2204
@@ -89,5 +120,14 @@ jobs:
       - name: Run Build
         run: yarn build
 
-#      - name: Run Test
-#        run: yarn test
+      - name: Run Lint
+        if: ${{ inputs.run_lint }}
+        run: yarn lint
+
+      - name: Run Test
+        if: ${{ inputs.run_test }}
+        run: yarn test
+
+      - name: Run Type Check
+        if: ${{ inputs.run_type_check }}
+        run: yarn type-check
