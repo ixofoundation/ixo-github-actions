@@ -1,5 +1,20 @@
 name: Build and Release Python
 
+# Multi-stage Docker Build Support:
+# This workflow supports building multiple containers from a single multi-stage Dockerfile.
+# To use this feature, provide a comma-separated list of container names via the 'container_names' input.
+# 
+# Example usage:
+#   container_names: "api-server,mcp-server,community-worker"
+#
+# Each container will be built with the corresponding target stage and published as separate packages:
+#   - ghcr.io/repo-api-server:v1.0.0
+#   - ghcr.io/repo-mcp-server:v1.0.0  
+#   - ghcr.io/repo-community-worker:v1.0.0
+#
+# All containers share the same version/tag but are published as separate packages.
+# If container_names is not provided, the workflow builds a single container without a target stage.
+
 on:
   workflow_call:
     inputs:
@@ -30,6 +45,10 @@ on:
         required: false
         type: boolean
         default: true
+      container_names:
+        required: false
+        type: string
+        description: 'Comma-separated list of container names for multi-stage builds (e.g., "api-server,mcp-server,community-worker")'
 
 permissions:
   contents: write
@@ -99,14 +118,34 @@ jobs:
       #       uv run bandit -r . -f json -o bandit-report.json
       #     fi
 
+  prepare-matrix:
+    name: 'Prepare Build Matrix'
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - id: set-matrix
+        name: Set matrix
+        run: |
+          if [ -n "${{ inputs.container_names }}" ]; then
+            # Convert comma-separated list to JSON array
+            containers=$(echo "${{ inputs.container_names }}" | tr ',' '\n' | sed 's/^/"/;s/$/"/' | paste -sd, -)
+            echo "matrix={\"container\":[$containers]}" >> $GITHUB_OUTPUT
+          else
+            echo "matrix={\"container\":[\"\"]}" >> $GITHUB_OUTPUT
+          fi
+
   build-and-publish:
     name: 'Build and Publish'
     runs-on: ubuntu-latest
-    needs: [validate-commit, python-ci]
+    needs: [validate-commit, python-ci, prepare-matrix]
     if: ${{ always() && (inputs.skip_ci || needs.python-ci.result == 'success') }}
+    strategy:
+      matrix: ${{ fromJson(needs.prepare-matrix.outputs.matrix) }}
     outputs:
       image_tag: ${{ steps.get_tag.outputs.image_tag }}
       image_digest: ${{ steps.docker_push.outputs.digest }}
+      container_tags: ${{ steps.collect_tags.outputs.container_tags }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -166,18 +205,35 @@ jobs:
         with:
           context: .
           push: true
-          tags: ghcr.io/${{ github.repository }}:${{ steps.get_tag.outputs.image_tag }}
+          tags: ${{ matrix.container != '' && format('ghcr.io/{0}-{1}:{2}', github.repository, matrix.container, steps.get_tag.outputs.image_tag) || format('ghcr.io/{0}:{1}', github.repository, steps.get_tag.outputs.image_tag) }}
           platforms: linux/amd64,linux/arm64
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          target: ${{ matrix.container != '' && matrix.container || '' }}
+
+      - id: collect_tags
+        name: Collect container tags
+        run: |
+          if [ -n "${{ matrix.container }}" ]; then
+            echo "container_tags=${{ steps.get_tag.outputs.image_tag }}" >> $GITHUB_OUTPUT
+          else
+            echo "container_tags=${{ steps.get_tag.outputs.image_tag }}" >> $GITHUB_OUTPUT
+          fi
 
   scan-image:
     name: 'Scan Docker Image'
     runs-on: ubuntu-latest
-    needs: build-and-publish
+    needs: [build-and-publish, prepare-matrix]
     if: ${{ inputs.docker_image_scanning && always() && needs.build-and-publish.result == 'success' }}
     continue-on-error: true
+    strategy:
+      matrix: ${{ fromJson(needs.prepare-matrix.outputs.matrix) }}
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.commit_sha }}
+
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -185,11 +241,31 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GHCR_TOKEN }}
 
+      - name: Generate image reference for scanning
+        id: scan_image
+        run: |
+          # Check if the current commit has a tag
+          TAG=$(git describe --tags --exact-match ${{ inputs.commit_sha }} 2>/dev/null || echo "")
+          if [ -n "$TAG" ]; then
+            IMAGE_TAG="$TAG"
+          else
+            # Use short commit hash if no tag
+            SHORT_SHA=$(echo ${{ inputs.commit_sha }} | cut -c1-7)
+            IMAGE_TAG="main-${SHORT_SHA}"
+          fi
+          
+          # Generate image reference based on container type
+          if [ -n "${{ matrix.container }}" ]; then
+            echo "image_ref=ghcr.io/${{ github.repository }}-${{ matrix.container }}:${IMAGE_TAG}" >> $GITHUB_OUTPUT
+          else
+            echo "image_ref=ghcr.io/${{ github.repository }}:${IMAGE_TAG}" >> $GITHUB_OUTPUT
+          fi
+
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         continue-on-error: true
         with:
-          image-ref: 'ghcr.io/${{ github.repository }}:${{ needs.build-and-publish.outputs.image_tag }}'
+          image-ref: '${{ steps.scan_image.outputs.image_ref }}'
           format: 'sarif'
           output: 'trivy-results.sarif'
 
