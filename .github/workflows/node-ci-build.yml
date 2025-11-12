@@ -81,7 +81,7 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node-version }}
-          cache: ${{ inputs.package_manager }}
+          cache: ${{ inputs.package_manager != 'bun' && inputs.package_manager || '' }}
 
       - name: Install dependencies yarn
         if: ${{ inputs.package_manager == 'yarn' }}
