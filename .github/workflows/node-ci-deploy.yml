@@ -13,6 +13,10 @@ on:
         required: false
         default: ''
         type: string
+      charts_path:
+        required: false
+        default: ''
+        type: string
 
 jobs:
   deploy:
@@ -42,7 +46,7 @@ jobs:
           gh_repo: ${{ env.HELM_REPO }}
           chart_name: ${{ inputs.chartName != '' && inputs.chartName || github.repository }}
           app_version: ${{ inputs.version }}
-          charts_path: charts/${{ inputs.environment }}
+          charts_path: ${{ inputs.charts_path != '' && inputs.charts_path || format('charts/{0}', inputs.environment) }}
           commit_author: ${{ github.actor }}
           commit_email: ${{ github.actor }}@users.noreply.github.com
           update_chart_annotations: true
