@@ -94,6 +94,10 @@ jobs:
       - name: Install dependencies npm
         if: ${{ inputs.package_manager == 'npm' }}
         run: npm install --frozen-lockfile
+      
+      - name: Install dependencies bun
+        if: ${{ inputs.package_manager == 'bun' }}
+        run: bun install --frozen-lockfile
 
       - name: Run Build pnpm
         if: ${{ !inputs.skip_ci && inputs.package_manager == 'pnpm' }}
@@ -106,6 +110,10 @@ jobs:
       - name: Run build npm
         run: npm run build
         if: ${{ !inputs.skip_ci && inputs.package_manager == 'npm' }}
+
+      - name: Run build bun
+        run: bun run build
+        if: ${{ !inputs.skip_ci && inputs.package_manager == 'bun' }}
 
       - name: Semantic Release
         run: npx semantic-release
