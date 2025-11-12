@@ -77,11 +77,18 @@ jobs:
         with:
           version: 10.0
 
+      - name: Setup bun
+        uses: oven-sh/setup-bun@v1
+        if: ${{ inputs.package_manager == 'bun' }}
+        with:
+          bun-version: latest
+
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v3
+        if: ${{ inputs.package_manager != 'bun' }}
         with:
           node-version: ${{ matrix.node-version }}
-          cache: ${{ inputs.package_manager != 'bun' && inputs.package_manager || '' }}
+          cache: ${{ inputs.package_manager }}
 
       - name: Install dependencies yarn
         if: ${{ inputs.package_manager == 'yarn' }}
