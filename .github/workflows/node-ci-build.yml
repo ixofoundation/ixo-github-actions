@@ -140,7 +140,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GHCR_TOKEN }}
         
       - name: Get release tag version (non-develop)
-        if: ${{ github.ref != 'refs/heads/develop' }}
+        if: ${{ github.ref != 'refs/heads/develop' && github.ref != 'refs/heads/dev' }}
         id: tag-version-non-develop
         run: |
           # Fetch the latest tag
@@ -152,7 +152,7 @@ jobs:
           echo "NEW_TAG=$NEW_TAG" >> "$GITHUB_OUTPUT"
 
       - name: Get release tag version (develop)
-        if: ${{ github.ref == 'refs/heads/develop' }}
+        if: ${{ github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/dev' }}
         id: tag-version-develop
         run: |
           # Fetch the latest tag
