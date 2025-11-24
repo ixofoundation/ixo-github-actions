@@ -146,8 +146,8 @@ jobs:
           # Fetch the latest tag
           LATEST_TAG=$(git tag --sort=v:refname | tail -n 1)
           
-          # Remove the '-develop.<number>' suffix if it exists
-          NEW_TAG=$(echo "$LATEST_TAG" | sed -E 's/-develop\.[0-9]+$//')
+          # Remove the '-develop.<number>' or '-dev.<number>' suffix if it exists
+          NEW_TAG=$(echo "$LATEST_TAG" | sed -E 's/-(develop|dev)\.[0-9]+$//')
           
           echo "NEW_TAG=$NEW_TAG" >> "$GITHUB_OUTPUT"
 
@@ -155,8 +155,8 @@ jobs:
         if: ${{ github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/dev' }}
         id: tag-version-develop
         run: |
-          # Fetch the latest tag
-          LATEST_TAG=$(git tag --sort=v:refname | grep 'develop' | tail -n 1)
+          # Fetch the latest tag (matches tags containing 'develop' or 'dev')
+          LATEST_TAG=$(git tag --sort=v:refname | grep -E '(develop|dev)' | tail -n 1)
           
           echo "NEW_TAG=$LATEST_TAG" >> "$GITHUB_OUTPUT"
 
