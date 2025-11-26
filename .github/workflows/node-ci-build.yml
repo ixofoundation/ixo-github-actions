@@ -314,6 +314,15 @@ jobs:
     with:
       environment: ${{ needs.branch-mapping.outputs.environment }}
       version: ${{ needs.release.outputs.NEW_TAG }}
+  release-helm-emerging-eco:
+    name: 'Release Helm Chart'
+    needs: [release, release-docker, security-scan, branch-mapping]
+    if: github.repository_owner == 'emerging-eco' && needs.branch-mapping.outputs.environment != 'mainnet' && (always() && needs.release.result == 'success' && needs.release-docker.result == 'success' && (needs.security-scan.result == 'success' || needs.security-scan.result == 'skipped' || needs.security-scan.result == 'failure'))
+    uses: emerging-eco/ixo-github-actions/.github/workflows/node-ci-deploy.yml@main
+    secrets: inherit
+    with:
+      environment: ${{ needs.branch-mapping.outputs.environment }}
+      version: ${{ needs.release.outputs.NEW_TAG }}
 # Notes for Deployment
 # TestNet will be deployed using the latest release image ^
 # Main will require deployment review and if approved use the latest release image ^
