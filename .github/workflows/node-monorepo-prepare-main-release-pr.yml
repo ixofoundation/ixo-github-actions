@@ -2,6 +2,12 @@ name: Prepare Main Changeset Release
 
 on:
   workflow_call:
+    inputs:
+      packages:
+        description: 'Comma-separated list of package names to patch (e.g., "app,common")'
+        required: false
+        type: string
+        default: 'app'
 
 jobs:
   create-changeset:
@@ -43,17 +49,36 @@ jobs:
       - name: "Create changeset file for main release"
         if: steps.check-changeset.outputs.changeset_exists == 'false'
         run: |
-          # Create a changeset file that will trigger release on main
-          # This is a patch release by default, but you can customize this
+          # Get package names from input (default: "app")
+          PACKAGES="${{ inputs.packages }}"
+          
+          # Create changeset file using the correct format
+          # Changesets CLI is interactive, so we create the file manually in the expected format
           CHANGESET_FILE=".changeset/$(date +%s)-main-release.md"
           mkdir -p .changeset
-          cat > "$CHANGESET_FILE" << EOF
-          ---
-          ---
           
-          Release for main branch (testnet deployment)
-          EOF
+          # Build the frontmatter with package names
+          # Format: ---\n'package-name': patch\n---
+          FRONTMATTER="---"
+          IFS=',' read -ra PKG_ARRAY <<< "$PACKAGES"
+          for PKG in "${PKG_ARRAY[@]}"; do
+            # Trim whitespace
+            PKG=$(echo "$PKG" | xargs)
+            if [ -n "$PKG" ]; then
+              # Ensure package name is properly quoted
+              FRONTMATTER="${FRONTMATTER}\n'${PKG}': patch"
+            fi
+          done
+          FRONTMATTER="${FRONTMATTER}\n---"
+          
+          # Create the changeset file with proper format
+          # This matches the exact format that changesets CLI creates
+          echo -e "$FRONTMATTER\n\nRelease to main" > "$CHANGESET_FILE"
+          
           echo "Created changeset file: $CHANGESET_FILE"
+          echo "Packages to patch: $PACKAGES"
+          echo "File contents:"
+          cat "$CHANGESET_FILE"
 
       - name: "Commit changeset with [skip ci]"
         if: steps.check-changeset.outputs.changeset_exists == 'false'
