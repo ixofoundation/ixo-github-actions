@@ -1,0 +1,72 @@
+name: Prepare Main Changeset Release
+
+on:
+  workflow_call:
+
+jobs:
+  create-changeset:
+    name: 'Create Changeset for Main Release'
+    runs-on: ubuntu-latest
+    # Only run if PR is from develop branch
+    if: github.head_ref == 'develop' || github.head_ref == 'dev'
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: "Checkout develop branch"
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: "Setup Pnpm 10.0"
+        uses: pnpm/action-setup@v2
+        with:
+          version: 10.0
+
+      - name: "Install dependencies"
+        run: pnpm install --frozen-lockfile
+
+      - name: "Check if changeset already exists"
+        id: check-changeset
+        run: |
+          # Check if there are any changeset files (excluding README.md)
+          if [ -d ".changeset" ] && [ -n "$(find .changeset -name '*.md' -type f ! -name 'README.md' 2>/dev/null)" ]; then
+            echo "changeset_exists=true" >> $GITHUB_OUTPUT
+            echo "Changeset file(s) already exist"
+          else
+            echo "changeset_exists=false" >> $GITHUB_OUTPUT
+            echo "No changeset file found, will create one"
+          fi
+
+      - name: "Create changeset file for main release"
+        if: steps.check-changeset.outputs.changeset_exists == 'false'
+        run: |
+          # Create a changeset file that will trigger release on main
+          # This is a patch release by default, but you can customize this
+          CHANGESET_FILE=".changeset/$(date +%s)-main-release.md"
+          mkdir -p .changeset
+          cat > "$CHANGESET_FILE" << EOF
+          ---
+          ---
+          
+          Release for main branch (testnet deployment)
+          EOF
+          echo "Created changeset file: $CHANGESET_FILE"
+
+      - name: "Commit changeset with [skip ci]"
+        if: steps.check-changeset.outputs.changeset_exists == 'false'
+        run: |
+          # Git requires user.name and user.email to make commits
+          # GitHub Actions runners don't set these by default
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .changeset/
+          # Use [skip ci] to prevent triggering workflows on this commit
+          # GitHub Actions will skip workflows for commits with this message
+          git commit -m "chore: add changeset for main release [skip ci]" || exit 0
+          git push origin ${{ github.head_ref }} || exit 0
+          echo "Committed changeset file with [skip ci] to prevent workflow trigger"
+          echo "The changeset will be included when the PR is merged to main"
+
