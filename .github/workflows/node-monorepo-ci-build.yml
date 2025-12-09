@@ -7,6 +7,18 @@ on:
         required: false
         type: boolean
         default: true
+      devnet_branches_override:
+        required: false
+        type: string
+        description: 'Comma-separated list of branches that map to devnet (e.g., "develop,dev,custom-dev")'
+      testnet_branches_override:
+        required: false
+        type: string
+        description: 'Comma-separated list of branches that map to testnet (e.g., "main,master,stage")'
+      mainnet_branches_override:
+        required: false
+        type: string
+        description: 'Comma-separated list of branches that map to mainnet (e.g., "prod,production")'
 
 jobs:
   branch-mapping:
@@ -18,14 +30,70 @@ jobs:
       - name: Branch Mapping
         id: environment
         run: |
-          if [ "${{ github.ref }}" = "refs/heads/develop" ]; then
-            echo "environment=devnet" >> "$GITHUB_OUTPUT"
-          elif [ "${{ github.ref }}" = "refs/heads/main" ] || [ "${{ github.ref }}" = "refs/heads/master" ]; then
-            echo "environment=testnet" >> "$GITHUB_OUTPUT"
+          BRANCH_NAME=$(echo "${{ github.ref }}" | sed 's|refs/heads/||')
+          ENVIRONMENT=""
+          
+          # Check devnet: use override if provided, otherwise use defaults
+          if [ -n "${{ inputs.devnet_branches_override }}" ]; then
+            IFS=',' read -ra DEVNET_BRANCHES <<< "${{ inputs.devnet_branches_override }}"
+            for branch in "${DEVNET_BRANCHES[@]}"; do
+              BRANCH_TRIM=$(echo "$branch" | xargs)
+              if [ -n "$BRANCH_TRIM" ] && [ "$BRANCH_NAME" = "$BRANCH_TRIM" ]; then
+                ENVIRONMENT="devnet"
+                break
+              fi
+            done
           else
-            echo "::error::Unsupported branch"
+            # Default devnet branches
+            if [ "$BRANCH_NAME" = "develop" ] || [ "$BRANCH_NAME" = "dev" ]; then
+              ENVIRONMENT="devnet"
+            fi
+          fi
+          
+          # Check testnet: use override if provided, otherwise use defaults (only if not already matched)
+          if [ -z "$ENVIRONMENT" ]; then
+            if [ -n "${{ inputs.testnet_branches_override }}" ]; then
+              IFS=',' read -ra TESTNET_BRANCHES <<< "${{ inputs.testnet_branches_override }}"
+              for branch in "${TESTNET_BRANCHES[@]}"; do
+                BRANCH_TRIM=$(echo "$branch" | xargs)
+                if [ -n "$BRANCH_TRIM" ] && [ "$BRANCH_NAME" = "$BRANCH_TRIM" ]; then
+                  ENVIRONMENT="testnet"
+                  break
+                fi
+              done
+            else
+              # Default testnet branches
+              if [ "$BRANCH_NAME" = "main" ] || [ "$BRANCH_NAME" = "master" ] || [ "$BRANCH_NAME" = "stage" ]; then
+                ENVIRONMENT="testnet"
+              fi
+            fi
+          fi
+          
+          # Check mainnet: use override if provided, otherwise use defaults (only if not already matched)
+          if [ -z "$ENVIRONMENT" ]; then
+            if [ -n "${{ inputs.mainnet_branches_override }}" ]; then
+              IFS=',' read -ra MAINNET_BRANCHES <<< "${{ inputs.mainnet_branches_override }}"
+              for branch in "${MAINNET_BRANCHES[@]}"; do
+                BRANCH_TRIM=$(echo "$branch" | xargs)
+                if [ -n "$BRANCH_TRIM" ] && [ "$BRANCH_NAME" = "$BRANCH_TRIM" ]; then
+                  ENVIRONMENT="mainnet"
+                  break
+                fi
+              done
+            else
+              # Default mainnet branches
+              if [ "$BRANCH_NAME" = "prod" ] || [ "$BRANCH_NAME" = "production" ]; then
+                ENVIRONMENT="mainnet"
+              fi
+            fi
+          fi
+          
+          if [ -z "$ENVIRONMENT" ]; then
+            echo "::error::Unsupported branch: $BRANCH_NAME"
             exit 1
           fi
+          
+          echo "environment=$ENVIRONMENT" >> "$GITHUB_OUTPUT"
   # We create a PR Release if there is a changesets file. if there is no changesets file and a package.json version is updated (e.g. merged PR), it is a Release.
   release:
     name: "[Create PR Release] OR [Create Github Tags & Release]"
