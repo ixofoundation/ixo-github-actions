@@ -34,6 +34,11 @@ on:
         required: false
         type: string
         description: 'Comma-separated list of branches that map to mainnet (e.g., "prod,production")'
+      dockerfile_path:
+        required: false
+        type: string
+        description: 'Path to the Dockerfile to use for the build'
+        default: './Dockerfile'
 
 permissions:
   contents: write
@@ -178,7 +183,7 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          file: ./Dockerfile
+          file: ${{ inputs.dockerfile_path }}
           push: true
           tags: ghcr.io/${{ env.IMAGE_NAME }}
 
