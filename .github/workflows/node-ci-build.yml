@@ -34,11 +34,11 @@ on:
         required: false
         type: string
         description: 'Comma-separated list of branches that map to mainnet (e.g., "prod,production")'
-      dockerfile_path:
+      root_path:
         required: false
         type: string
-        description: 'Path to the Dockerfile to use for the build'
-        default: './Dockerfile'
+        description: 'For builds in sub-directories, provide the path'
+        default: '.'
 
 permissions:
   contents: write
@@ -79,6 +79,9 @@ jobs:
         node-version: [ "${{ inputs.node_version }}" ]
     outputs:
       NEW_TAG: ${{ steps.tag-version-non-develop.outputs.NEW_TAG || steps.tag-version-develop.outputs.NEW_TAG }}
+    defaults:
+      run:
+        working-directory: ${{ inputs.root_path }}
 
     steps:
       - name: Checkout Repository
@@ -106,6 +109,7 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: ${{ inputs.package_manager }}
+          cache-dependency-path: ${{ inputs.root_path }}/${{ inputs.package_manager == 'pnpm' && 'pnpm-lock.yaml' || (inputs.package_manager == 'yarn' && 'yarn.lock' || 'package-lock.json') }}
 
       - name: Install dependencies yarn
         if: ${{ inputs.package_manager == 'yarn' }}
@@ -183,7 +187,8 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          file: ${{ inputs.dockerfile_path }}
+          context: ${{ inputs.root_path }}
+          file: ${{ inputs.root_path }}/Dockerfile
           push: true
           tags: ghcr.io/${{ env.IMAGE_NAME }}
 
