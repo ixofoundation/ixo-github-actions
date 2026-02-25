@@ -37,8 +37,8 @@ on:
       root_path:
         required: false
         type: string
-        description: 'For builds in sub-directories, provide the path'
-        default: '.'
+        description: 'For builds in sub-directories, provide the path. Leave empty for repo root.'
+        default: ''
 
 permissions:
   contents: write
@@ -81,7 +81,7 @@ jobs:
       NEW_TAG: ${{ steps.tag-version-non-develop.outputs.NEW_TAG || steps.tag-version-develop.outputs.NEW_TAG }}
     defaults:
       run:
-        working-directory: ${{ inputs.root_path }}
+        working-directory: ${{ inputs.root_path || '.' }}
 
     steps:
       - name: Checkout Repository
@@ -109,7 +109,7 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: ${{ inputs.package_manager }}
-          cache-dependency-path: ${{ inputs.root_path }}/${{ inputs.package_manager == 'pnpm' && 'pnpm-lock.yaml' || (inputs.package_manager == 'yarn' && 'yarn.lock' || 'package-lock.json') }}
+          cache-dependency-path: ${{ format('{0}/{1}', inputs.root_path || '.', inputs.package_manager == 'pnpm' && 'pnpm-lock.yaml' || (inputs.package_manager == 'yarn' && 'yarn.lock' || 'package-lock.json')) }}
 
       - name: Install dependencies yarn
         if: ${{ inputs.package_manager == 'yarn' }}
@@ -184,7 +184,16 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GHCR_TOKEN }}
 
-      - name: Build and push Docker image
+      - name: Build and push Docker image (repo root)
+        if: ${{ !inputs.root_path || inputs.root_path == '.' }}
+        uses: docker/build-push-action@v5
+        with:
+          file: Dockerfile
+          push: true
+          tags: ghcr.io/${{ env.IMAGE_NAME }}
+
+      - name: Build and push Docker image (subdirectory)
+        if: ${{ inputs.root_path && inputs.root_path != '.' }}
         uses: docker/build-push-action@v5
         with:
           context: ${{ inputs.root_path }}
