@@ -194,7 +194,7 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          context: .
+          context: ${{ inputs.root_path || '.' }}
           file: ${{ inputs.root_path && format('{0}/Dockerfile', inputs.root_path) || './Dockerfile' }}
           push: true
           tags: ghcr.io/${{ env.IMAGE_NAME }}
