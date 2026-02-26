@@ -323,7 +323,7 @@ jobs:
       environment: ${{ needs.branch-mapping.outputs.environment }}
       version: ${{ matrix.package.version || needs.release.outputs.NEW_TAG }}
       chartName: ${{ inputs.root_path != '' && inputs.root_path || '' }}
-      charts_path: ${{ inputs.root_path != '' && format('charts/{0}/{1}/charts/{2}', needs.branch-mapping.outputs.environment, github.repository, inputs.root_path) || '' }}
+      charts_path: ${{ inputs.root_path != '' && format('charts/{0}/{1}/charts', needs.branch-mapping.outputs.environment, github.repository) || '' }}
   release-helm:
     name: 'Release Helm Chart'
     needs: [release, release-docker, security-scan, branch-mapping]
@@ -334,7 +334,7 @@ jobs:
       environment: ${{ needs.branch-mapping.outputs.environment }}
       version: ${{ needs.release.outputs.NEW_TAG }}
       chartName: ${{ inputs.root_path != '' && inputs.root_path || '' }}
-      charts_path: ${{ inputs.root_path != '' && format('charts/{0}/{1}/charts/{2}', needs.branch-mapping.outputs.environment, github.repository, inputs.root_path) || '' }}
+      charts_path: ${{ inputs.root_path != '' && format('charts/{0}/{1}/charts', needs.branch-mapping.outputs.environment, github.repository) || '' }}
   release-helm-emerging-eco:
     name: 'Release Helm Chart'
     needs: [release, release-docker, security-scan, branch-mapping]
@@ -345,7 +345,7 @@ jobs:
       environment: ${{ needs.branch-mapping.outputs.environment }}
       version: ${{ needs.release.outputs.NEW_TAG }}
       chartName: ${{ inputs.root_path != '' && inputs.root_path || '' }}
-      charts_path: ${{ inputs.root_path != '' && format('charts/{0}/{1}/charts/{2}', needs.branch-mapping.outputs.environment, github.repository, inputs.root_path) || '' }}
+      charts_path: ${{ inputs.root_path != '' && format('charts/{0}/{1}/charts', needs.branch-mapping.outputs.environment, github.repository) || '' }}
 # Notes for Deployment
 # TestNet will be deployed using the latest release image ^
 # Main will require deployment review and if approved use the latest release image ^
