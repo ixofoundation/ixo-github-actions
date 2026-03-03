@@ -287,11 +287,35 @@ jobs:
       version: ${{ matrix.package.version }}
       chartName: ${{ github.repository }}-${{ matrix.package.name }}
 
+  check-mainnet-protection:
+    name: 'Check Mainnet Environment Protection'
+    runs-on: ubuntu-latest
+    needs: [release, release-docker, security-scan, branch-mapping, filter-packages]
+    if: needs.branch-mapping.result == 'success' && (needs.branch-mapping.outputs.environment == 'mainnet' || needs.branch-mapping.outputs.also_mainnet == 'true') && needs.filter-packages.result == 'success' && needs.filter-packages.outputs.deployable_packages != '[]' && (always() && needs.release.outputs.published == 'true' && (needs.security-scan.result == 'success' || needs.security-scan.result == 'skipped' || needs.security-scan.result == 'failure'))
+    steps:
+      - name: Verify production environment has protection rules
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if ! RESPONSE=$(gh api repos/${{ github.repository }}/environments/production 2>&1); then
+            echo "::error::No 'production' environment found in ${{ github.repository }}. Create a 'production' environment with required reviewers in Settings → Environments to enable mainnet deployments."
+            exit 1
+          fi
+
+          PROTECTION_COUNT=$(echo "$RESPONSE" | jq '.protection_rules | length')
+
+          if [ "$PROTECTION_COUNT" -eq "0" ]; then
+            echo "::error::The 'production' environment in ${{ github.repository }} has no protection rules configured. Add required reviewers in Settings → Environments → production to enable mainnet deployments."
+            exit 1
+          fi
+
+          echo "Production environment verified: $PROTECTION_COUNT protection rule(s) configured. Proceeding to deployment approval."
+
   mainnet-approval-gate:
     name: 'Mainnet Deployment Approval'
     runs-on: ubuntu-latest
-    needs: [release, release-docker, security-scan, branch-mapping, filter-packages]
-    if: (needs.branch-mapping.outputs.environment == 'mainnet' || needs.branch-mapping.outputs.also_mainnet == 'true') && needs.filter-packages.result == 'success' && needs.filter-packages.outputs.deployable_packages != '[]' && (always() && needs.release.outputs.published == 'true' && (needs.security-scan.result == 'success' || needs.security-scan.result == 'skipped' || needs.security-scan.result == 'failure'))
+    needs: [release, release-docker, security-scan, branch-mapping, filter-packages, check-mainnet-protection]
+    if: (needs.branch-mapping.outputs.environment == 'mainnet' || needs.branch-mapping.outputs.also_mainnet == 'true') && needs.filter-packages.result == 'success' && needs.filter-packages.outputs.deployable_packages != '[]' && (always() && needs.release.outputs.published == 'true' && (needs.security-scan.result == 'success' || needs.security-scan.result == 'skipped' || needs.security-scan.result == 'failure') && needs.check-mainnet-protection.result == 'success')
     environment: production
     steps:
       - name: Deployment approved
@@ -327,5 +351,5 @@ jobs:
 
 # Notes for Deployment
 # Devnet/Testnet are deployed automatically after a successful release.
-# Mainnet deployment pauses at the mainnet-approval-gate job for manual approval via the 'production' environment
-#   in the {org}/ixo-github-actions repo. Configure required reviewers there once to gate all mainnet deploys.
+# Mainnet deployment pauses at mainnet-approval-gate for manual approval via the caller repo's 'production' environment.
+#   Each caller repo must have a 'production' environment with required reviewers in Settings → Environments.
