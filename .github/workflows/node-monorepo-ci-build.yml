@@ -194,14 +194,15 @@ jobs:
           echo "image_name=ghcr.io/${{ github.repository }}/${FORMATTED_NAME}" >> $GITHUB_OUTPUT
 
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@0.31.0
+        uses: aquasecurity/trivy-action@0.35.0
         continue-on-error: true
         with:
           image-ref: '${{ steps.set-image-name.outputs.image_name }}:${{ env.IMAGE_TAG }}'
           format: 'sarif'
           output: 'trivy-results.sarif'
           severity: 'CRITICAL'
-          #exit-code: '0'  # Fail if critical/high vulnerabilities found (currently will not fail - set to exit code 0)
+          ignore-unfixed: true
+          exit-code: '1'
 
       # - name: Upload Trivy scan results to GitHub Security tab # Populate to Github , TODO look into if this is needed
       #   uses: github/codeql-action/upload-sarif@v3
@@ -210,13 +211,14 @@ jobs:
       #     sarif_file: 'trivy-results.sarif'
 
       - name: Run Trivy vulnerability scanner for readable output # Readable from Logs
-        uses: aquasecurity/trivy-action@0.31.0
+        uses: aquasecurity/trivy-action@0.35.0
         continue-on-error: true
         if: always()
         with:
           image-ref: '${{ steps.set-image-name.outputs.image_name }}:${{ env.IMAGE_TAG }}'
           format: 'table'
           severity: 'CRITICAL,HIGH,MEDIUM'
+          ignore-unfixed: true
 
   filter-packages:
     name: 'Filter Packages for Deployment'
@@ -263,7 +265,7 @@ jobs:
   deploy-ixoworld-workaround:
     name: 'Release Helm Chart(s)'
     needs: [ release, release-docker, security-scan, branch-mapping, filter-packages ]
-    if: github.repository_owner == 'ixoworld' && needs.branch-mapping.outputs.environment != 'mainnet' && needs.filter-packages.result == 'success' && needs.filter-packages.outputs.deployable_packages != '[]' && (always() && (needs.security-scan.result == 'success' || needs.security-scan.result == 'skipped' || needs.security-scan.result == 'failure'))
+    if: github.repository_owner == 'ixoworld' && needs.branch-mapping.outputs.environment != 'mainnet' && needs.filter-packages.result == 'success' && needs.filter-packages.outputs.deployable_packages != '[]' && (always() && (needs.security-scan.result == 'success' || needs.security-scan.result == 'skipped'))
     uses: ixoworld/ixo-github-actions/.github/workflows/node-ci-deploy.yml@main
     strategy:
       matrix:
@@ -276,7 +278,7 @@ jobs:
   deploy:
     name: 'Release Helm Chart(s)'
     needs: [ release, release-docker, security-scan, branch-mapping, filter-packages ]
-    if: github.repository_owner == 'ixofoundation' && needs.branch-mapping.outputs.environment != 'mainnet' && needs.filter-packages.result == 'success' && needs.filter-packages.outputs.deployable_packages != '[]' && (always() && (needs.security-scan.result == 'success' || needs.security-scan.result == 'skipped' || needs.security-scan.result == 'failure'))
+    if: github.repository_owner == 'ixofoundation' && needs.branch-mapping.outputs.environment != 'mainnet' && needs.filter-packages.result == 'success' && needs.filter-packages.outputs.deployable_packages != '[]' && (always() && (needs.security-scan.result == 'success' || needs.security-scan.result == 'skipped'))
     uses: ixofoundation/ixo-github-actions/.github/workflows/node-ci-deploy.yml@main
     strategy:
       matrix:
