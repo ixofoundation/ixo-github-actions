@@ -17,6 +17,11 @@ on:
         required: false
         default: ''
         type: string
+      update_parent_chart:
+        required: false
+        default: false
+        type: boolean
+        description: 'When true, bumps the subchart chart version and updates the parent chart Chart.yaml dependency. Expects standard Helm subchart structure where charts_path ends in /charts.'
 
 jobs:
   deploy:
@@ -50,3 +55,69 @@ jobs:
           commit_author: ${{ github.actor }}
           commit_email: ${{ github.actor }}@users.noreply.github.com
           update_chart_annotations: true
+
+      - name: Checkout helm charts repo (for parent update)
+        if: ${{ inputs.update_parent_chart }}
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.HELM_OWNER }}/${{ env.HELM_REPO }}
+          token: ${{ secrets.GHCR_TOKEN }}
+          path: helm-parent-update
+          fetch-depth: 1
+
+      - name: Install yq
+        if: ${{ inputs.update_parent_chart }}
+        uses: mikefarah/yq@v4
+
+      - name: Update parent chart dependency
+        if: ${{ inputs.update_parent_chart }}
+        run: |
+          cd helm-parent-update
+
+          CHARTS_PATH="${{ inputs.charts_path != '' && inputs.charts_path || format('charts/{0}', inputs.environment) }}"
+          CHART_NAME="${{ inputs.chartName != '' && inputs.chartName || github.repository }}"
+          SUBCHART_YAML="${CHARTS_PATH}/${CHART_NAME}/Chart.yaml"
+          PARENT_YAML="$(dirname "${CHARTS_PATH}")/Chart.yaml"
+
+          if [ ! -f "${SUBCHART_YAML}" ]; then
+            echo "::error::Subchart not found at ${SUBCHART_YAML}"
+            exit 1
+          fi
+
+          if [ ! -f "${PARENT_YAML}" ]; then
+            echo "::error::Parent chart not found at ${PARENT_YAML}"
+            exit 1
+          fi
+
+          # Compute new chart version using -syncN suffix.
+          # This is version-agnostic: works for SemVer (1.0.0 -> 1.0.0-sync1)
+          # and hash-based versions (dev-abc123 -> dev-abc123-sync1).
+          CURRENT_VER=$(yq '.version' "${SUBCHART_YAML}")
+          if echo "${CURRENT_VER}" | grep -qE '\-sync[0-9]+$'; then
+            BASE=$(echo "${CURRENT_VER}" | sed -E 's/-sync[0-9]+$//')
+            SYNC_NUM=$(echo "${CURRENT_VER}" | grep -oE '[0-9]+$')
+            NEW_VER="${BASE}-sync$((SYNC_NUM + 1))"
+          else
+            NEW_VER="${CURRENT_VER}-sync1"
+          fi
+
+          yq -i ".version = \"${NEW_VER}\"" "${SUBCHART_YAML}"
+          echo "Versioned ${CHART_NAME}: ${CURRENT_VER} -> ${NEW_VER}"
+
+          # Update the parent chart's dependency reference to the new subchart version
+          if yq '.dependencies[] | select(.name == "'"${CHART_NAME}"'")' "${PARENT_YAML}" | grep -q .; then
+            yq -i "(.dependencies[] | select(.name == \"${CHART_NAME}\") | .version) = \"${NEW_VER}\"" "${PARENT_YAML}"
+            echo "Updated parent chart dependency ${CHART_NAME} -> ${NEW_VER}"
+          else
+            echo "::warning::No dependency '${CHART_NAME}' found in ${PARENT_YAML}, skipping parent update"
+          fi
+
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor }}@users.noreply.github.com"
+          git add .
+          if ! git diff --staged --quiet; then
+            git commit -m "chore: version ${CHART_NAME} subchart to ${NEW_VER}"
+            git push
+          else
+            echo "No changes to commit for parent chart update"
+          fi

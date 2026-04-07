@@ -39,6 +39,11 @@ on:
         type: string
         description: 'For builds in sub-directories, provide the path. Leave empty for repo root.'
         default: ''
+      update_parent_chart:
+        required: false
+        type: boolean
+        default: false
+        description: 'When true (and root_path is set), also bumps the subchart chart version and updates the parent chart Chart.yaml dependency in ixo-helm-charts.'
 
 permissions:
   contents: write
@@ -335,6 +340,7 @@ jobs:
       version: ${{ matrix.package.version || needs.release.outputs.NEW_TAG }}
       chartName: ${{ inputs.root_path != '' && inputs.root_path || '' }}
       charts_path: ${{ inputs.root_path != '' && format('charts/{0}/{1}/charts', needs.branch-mapping.outputs.environment, github.repository) || '' }}
+      update_parent_chart: ${{ inputs.root_path != '' && inputs.update_parent_chart || false }}
   release-helm:
     name: 'Release Helm Chart'
     needs: [release, release-docker, security-scan, branch-mapping]
@@ -346,6 +352,7 @@ jobs:
       version: ${{ needs.release.outputs.NEW_TAG }}
       chartName: ${{ inputs.root_path != '' && inputs.root_path || '' }}
       charts_path: ${{ inputs.root_path != '' && format('charts/{0}/{1}/charts', needs.branch-mapping.outputs.environment, github.repository) || '' }}
+      update_parent_chart: ${{ inputs.root_path != '' && inputs.update_parent_chart || false }}
   release-helm-emerging-eco:
     name: 'Release Helm Chart'
     needs: [release, release-docker, security-scan, branch-mapping]
@@ -357,6 +364,7 @@ jobs:
       version: ${{ needs.release.outputs.NEW_TAG }}
       chartName: ${{ inputs.root_path != '' && inputs.root_path || '' }}
       charts_path: ${{ inputs.root_path != '' && format('charts/{0}/{1}/charts', needs.branch-mapping.outputs.environment, github.repository) || '' }}
+      update_parent_chart: ${{ inputs.root_path != '' && inputs.update_parent_chart || false }}
 
   # ─────────────────────────────────────────────────────────────────────────────
   # MAINNET DEPLOYMENT — requires GitHub Team/Enterprise plan

@@ -19,6 +19,11 @@ on:
         required: false
         type: string
         description: 'Comma-separated list of branches that map to mainnet (e.g., "prod,production")'
+      update_parent_chart:
+        required: false
+        type: boolean
+        default: false
+        description: 'When true, also bumps each deployed package subchart version and updates the parent chart Chart.yaml dependency in ixo-helm-charts. Requires charts_path to be passed pointing to the subcharts directory.'
 
 jobs:
   branch-mapping:
@@ -277,6 +282,7 @@ jobs:
       environment: ${{ needs.branch-mapping.outputs.environment }}
       version: ${{ matrix.package.version }}
       chartName: ${{ github.repository }}-${{ matrix.package.name }}
+      update_parent_chart: ${{ inputs.update_parent_chart }}
   deploy:
     name: 'Release Helm Chart(s)'
     needs: [ release, release-docker, security-scan, branch-mapping, filter-packages ]
@@ -290,6 +296,7 @@ jobs:
       environment: ${{ needs.branch-mapping.outputs.environment }}
       version: ${{ matrix.package.version }}
       chartName: ${{ github.repository }}-${{ matrix.package.name }}
+      update_parent_chart: ${{ inputs.update_parent_chart }}
 
   # ─────────────────────────────────────────────────────────────────────────────
   # MAINNET DEPLOYMENT — requires GitHub Team/Enterprise plan
