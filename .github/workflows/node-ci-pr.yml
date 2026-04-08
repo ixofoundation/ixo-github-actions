@@ -26,7 +26,7 @@ on:
 jobs:
   build-pnpm:
     name: Node.js Build and Test
-    runs-on: buildjet-4vcpu-ubuntu-2204
+    runs-on: ubuntu-latest #buildjet-4vcpu-ubuntu-2204
     if: ${{ inputs.package_manager == 'pnpm' }}
     strategy:
       matrix:
@@ -65,7 +65,7 @@ jobs:
         run: pnpm type-check
   build-npm:
     name: Node.js Build and Test
-    runs-on: buildjet-4vcpu-ubuntu-2204
+    runs-on: ubuntu-latest #buildjet-4vcpu-ubuntu-2204
     if: ${{ inputs.package_manager == 'npm' }}
     strategy:
       matrix:
@@ -99,7 +99,7 @@ jobs:
         run: npm run type-check
   build-yarn:
     name: Node.js Build and Test
-    runs-on: buildjet-4vcpu-ubuntu-2204
+    runs-on: ubuntu-latest #buildjet-4vcpu-ubuntu-2204
     if: ${{ inputs.package_manager == 'yarn' }}
     strategy:
       matrix:
@@ -133,7 +133,7 @@ jobs:
         run: yarn type-check
   build-bun:
     name: Node.js Build and Test
-    runs-on: buildjet-4vcpu-ubuntu-2204
+    runs-on: ubuntu-latest #buildjet-4vcpu-ubuntu-2204
     if: ${{ inputs.package_manager == 'bun' }}
     strategy:
       matrix:
