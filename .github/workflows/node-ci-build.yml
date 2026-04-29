@@ -151,7 +151,7 @@ jobs:
       - name: Semantic Release
         run: npx semantic-release
         env:
-          GITHUB_TOKEN: ${{ secrets.GHCR_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN || secrets.GHCR_TOKEN }}
         
       - name: Get release tag version (non-develop)
         if: ${{ github.ref != 'refs/heads/develop' && github.ref != 'refs/heads/dev' }}
