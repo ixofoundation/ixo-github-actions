@@ -151,7 +151,7 @@ jobs:
       - name: Semantic Release
         run: npx semantic-release
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN || secrets.GHCR_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN || secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}
         
       - name: Get release tag version (non-develop)
         if: ${{ github.ref != 'refs/heads/develop' && github.ref != 'refs/heads/dev' }}
@@ -331,7 +331,7 @@ jobs:
   release-ixoworld-workaround:
     name: 'Release Helm Chart(s)'
     needs: [ release, release-docker, security-scan, branch-mapping ]
-    if: github.repository_owner == 'ixoworld' && needs.branch-mapping.outputs.environment != 'mainnet' && (always() && needs.release.result == 'success' && needs.release-docker.result == 'success' && (needs.security-scan.result == 'success' || needs.security-scan.result == 'skipped'))
+    if: github.repository_owner == 'ixoworld' && needs.branch-mapping.outputs.environment != 'mainnet' && needs.branch-mapping.outputs.environment != 'devnet' && (always() && needs.release.result == 'success' && needs.release-docker.result == 'success' && (needs.security-scan.result == 'success' || needs.security-scan.result == 'skipped'))
     uses: ixoworld/ixo-github-actions/.github/workflows/node-ci-deploy.yml@main
     secrets: inherit
     with:
@@ -343,7 +343,7 @@ jobs:
   release-helm:
     name: 'Release Helm Chart'
     needs: [release, release-docker, security-scan, branch-mapping]
-    if: github.repository_owner == 'ixofoundation' && needs.branch-mapping.outputs.environment != 'mainnet' && (always() && needs.release.result == 'success' && needs.release-docker.result == 'success' && (needs.security-scan.result == 'success' || needs.security-scan.result == 'skipped'))
+    if: github.repository_owner == 'ixofoundation' && needs.branch-mapping.outputs.environment != 'mainnet' && needs.branch-mapping.outputs.environment != 'devnet' && (always() && needs.release.result == 'success' && needs.release-docker.result == 'success' && (needs.security-scan.result == 'success' || needs.security-scan.result == 'skipped'))
     uses: ixofoundation/ixo-github-actions/.github/workflows/node-ci-deploy.yml@main
     secrets: inherit
     with:
@@ -355,7 +355,7 @@ jobs:
   release-helm-emerging-eco:
     name: 'Release Helm Chart'
     needs: [release, release-docker, security-scan, branch-mapping]
-    if: github.repository_owner == 'emerging-eco' && needs.branch-mapping.outputs.environment != 'mainnet' && (always() && needs.release.result == 'success' && needs.release-docker.result == 'success' && (needs.security-scan.result == 'success' || needs.security-scan.result == 'skipped'))
+    if: github.repository_owner == 'emerging-eco' && needs.branch-mapping.outputs.environment != 'mainnet' && needs.branch-mapping.outputs.environment != 'devnet' && (always() && needs.release.result == 'success' && needs.release-docker.result == 'success' && (needs.security-scan.result == 'success' || needs.security-scan.result == 'skipped'))
     uses: emerging-eco/ixo-github-actions/.github/workflows/node-ci-deploy.yml@main
     secrets: inherit
     with:
