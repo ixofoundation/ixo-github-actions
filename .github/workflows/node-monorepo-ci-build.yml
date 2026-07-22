@@ -178,6 +178,8 @@ jobs:
           out.write('publishedPackages=' + JSON.stringify(changed.map(p => ({ name: p.name, version: p.version }))) + '\n');
           out.end();
           "
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: "Create Release Pull Request"
         id: changeset
