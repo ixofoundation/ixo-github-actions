@@ -150,30 +150,33 @@ jobs:
       # Docker image with, then stop -- nothing here is committed, tagged, or published.
       # `published`/`publishedPackages` are shaped identically to changesets/action's own
       # outputs below, so release-docker/security-scan don't need to know which path ran.
+      # Standalone by design: no reliance on any package manager's workspace-listing
+      # command (e.g. `pnpm -r list`) or on a package resolved from the caller repo's
+      # own node_modules (e.g. @manypkg/get-packages). Package discovery instead uses
+      # only git (always present) and Node's built-in fs, and the changesets binary is
+      # invoked directly from node_modules/.bin rather than through a package-manager
+      # -specific `exec`/`run` wrapper.
       - name: "Compute devnet snapshot version"
         id: snapshot
         if: needs.branch-mapping.outputs.environment == 'devnet' && inputs.devnet_snapshot_release
         run: |
+          CHANGESET_BIN="node_modules/.bin/changeset"
+          "$CHANGESET_BIN" version --snapshot "${{ inputs.devnet_snapshot_tag }}"
+
+          export CHANGED_PACKAGE_JSONS=$(git diff --name-only | grep 'package\.json$' || true)
+
           node -e "
-          const { execSync } = require('node:child_process');
           const fs = require('node:fs');
-          const { getPackages } = require('@manypkg/get-packages');
 
-          (async () => {
-            const cwd = process.cwd();
-            const before = await getPackages(cwd);
-            const beforeVersions = new Map(before.packages.map(p => [p.packageJson.name, p.packageJson.version]));
+          const changedFiles = (process.env.CHANGED_PACKAGE_JSONS || '').split('\n').filter(Boolean);
+          const changed = changedFiles
+            .map(f => JSON.parse(fs.readFileSync(f, 'utf8')))
+            .filter(pkg => pkg.name);
 
-            execSync('pnpm exec changeset version --snapshot ${{ inputs.devnet_snapshot_tag }}', { stdio: 'inherit', cwd });
-
-            const after = await getPackages(cwd);
-            const changed = after.packages.filter(p => beforeVersions.get(p.packageJson.name) !== p.packageJson.version);
-
-            const out = fs.createWriteStream(process.env.GITHUB_OUTPUT, { flags: 'a' });
-            out.write('published=' + (changed.length > 0) + '\n');
-            out.write('publishedPackages=' + JSON.stringify(changed.map(p => ({ name: p.packageJson.name, version: p.packageJson.version }))) + '\n');
-            out.end();
-          })();
+          const out = fs.createWriteStream(process.env.GITHUB_OUTPUT, { flags: 'a' });
+          out.write('published=' + (changed.length > 0) + '\n');
+          out.write('publishedPackages=' + JSON.stringify(changed.map(p => ({ name: p.name, version: p.version }))) + '\n');
+          out.end();
           "
 
       - name: "Create Release Pull Request"
