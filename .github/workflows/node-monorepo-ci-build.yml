@@ -23,7 +23,17 @@ on:
         required: false
         type: boolean
         default: true
-        description: 'When true (default), appends -develop.<run_number> to the image/app version for devnet builds only. Set to false to opt a caller out.'
+        description: 'When true (default), appends -develop.<run_number> to the image/app version for devnet builds only. Set to false to opt a caller out. Ignored when devnet_snapshot_release is true (the snapshot version is already self-describing).'
+      devnet_snapshot_release:
+        required: false
+        type: boolean
+        default: false
+        description: 'When true, devnet builds use changesets snapshot mode (changeset version --snapshot) instead of the normal changesets/action PR flow: an ephemeral version is computed to tag the Docker image, and nothing is committed, tagged, or PR''d. Recommended so the devnet branch never needs its own persistent version state and never needs to be merged back into the release branch. Opt-in and off by default to avoid changing behavior for existing callers.'
+      devnet_snapshot_tag:
+        required: false
+        type: string
+        default: 'develop'
+        description: 'Tag used in the snapshot version string for devnet builds (e.g. "develop" -> 0.0.0-develop-<timestamp>). Only used when devnet_snapshot_release is true.'
 
 jobs:
   branch-mapping:
@@ -107,8 +117,14 @@ jobs:
           echo "environment=$ENVIRONMENT" >> "$GITHUB_OUTPUT"
           echo "also_mainnet=$ALSO_MAINNET" >> "$GITHUB_OUTPUT"
   # We create a PR Release if there is a changesets file. if there is no changesets file and a package.json version is updated (e.g. merged PR), it is a Release.
+  #
+  # devnet, when devnet_snapshot_release is true, takes a different path entirely: it
+  # computes an ephemeral changesets snapshot version to tag the Docker image and never
+  # commits, tags, or opens a PR. This is what lets devnet skip owning any persistent
+  # version state, and means it never needs to be merged back into the release branch.
   release:
     name: "[Create PR Release] OR [Create Github Tags & Release]"
+    needs: branch-mapping
     permissions:
       contents: write
       packages: write
@@ -116,8 +132,8 @@ jobs:
     timeout-minutes: 20
     runs-on: ubuntu-latest
     outputs:
-      published: ${{ steps.changeset.outputs.published }}
-      publishedPackages: ${{ steps.changeset.outputs.publishedPackages }}
+      published: ${{ steps.changeset.outputs.published || steps.snapshot.outputs.published }}
+      publishedPackages: ${{ steps.changeset.outputs.publishedPackages || steps.snapshot.outputs.publishedPackages }}
     steps:
       - name: "Checkout Repository"
         uses: actions/checkout@v3
@@ -130,41 +146,39 @@ jobs:
       - name: "Install dependencies"
         run: pnpm install --frozen-lockfile
 
-      # Callers may run changesets pre-release mode (.changeset/pre.json) on one
-      # long-lived branch (e.g. develop). If that file reaches another branch via a
-      # merge, changesets/action's own hasChangesets check filters out every pending
-      # changeset already listed in pre.json's "changesets" array as consumed by the
-      # other branch's prerelease cycle, and silently skips straight to publish with
-      # nothing to release. Strip it here, before changesets/action runs, whenever its
-      # tag doesn't match the current branch.
-      #
-      # The commit+push below is only to persist the fix for future checkouts of this
-      # branch -- it is NOT what unblocks this run. Pushes made with the job's default
-      # GITHUB_TOKEN are deliberately excluded by GitHub from triggering new `push`
-      # workflow runs (anti-loop protection), so a "strip, push, and wait for a second
-      # clean run" design silently never re-triggers. Instead, changesets/action always
-      # runs immediately below, in this same job, against the already-fixed local
-      # checkout -- it doesn't need to wait for the push to land anywhere.
-      - name: "Strip stray changesets pre-release flag"
+      # Ephemeral devnet path: compute a snapshot version per changed package to tag the
+      # Docker image with, then stop -- nothing here is committed, tagged, or published.
+      # `published`/`publishedPackages` are shaped identically to changesets/action's own
+      # outputs below, so release-docker/security-scan don't need to know which path ran.
+      - name: "Compute devnet snapshot version"
+        id: snapshot
+        if: needs.branch-mapping.outputs.environment == 'devnet' && inputs.devnet_snapshot_release
         run: |
-          if [ ! -f .changeset/pre.json ]; then
-            exit 0
-          fi
+          node -e "
+          const { execSync } = require('node:child_process');
+          const fs = require('node:fs');
+          const { getPackages } = require('@manypkg/get-packages');
 
-          PRE_TAG=$(node -p "require('./.changeset/pre.json').tag")
-          if [ "$PRE_TAG" = "$GITHUB_REF_NAME" ]; then
-            exit 0
-          fi
+          (async () => {
+            const cwd = process.cwd();
+            const before = await getPackages(cwd);
+            const beforeVersions = new Map(before.packages.map(p => [p.packageJson.name, p.packageJson.version]));
 
-          echo "::notice::.changeset/pre.json (tag: $PRE_TAG) doesn't belong on branch $GITHUB_REF_NAME; removing it"
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git rm .changeset/pre.json
-          git commit -m "chore: strip stray changesets pre-release flag"
-          git push origin HEAD:"$GITHUB_REF_NAME"
+            execSync('pnpm exec changeset version --snapshot ${{ inputs.devnet_snapshot_tag }}', { stdio: 'inherit', cwd });
+
+            const after = await getPackages(cwd);
+            const changed = after.packages.filter(p => beforeVersions.get(p.packageJson.name) !== p.packageJson.version);
+
+            const out = fs.createWriteStream(process.env.GITHUB_OUTPUT, { flags: 'a' });
+            out.write('published=' + (changed.length > 0) + '\n');
+            out.write('publishedPackages=' + JSON.stringify(changed.map(p => ({ name: p.packageJson.name, version: p.packageJson.version }))) + '\n');
+            out.end();
+          })();
+          "
 
       - name: "Create Release Pull Request"
         id: changeset
+        if: "!(needs.branch-mapping.outputs.environment == 'devnet' && inputs.devnet_snapshot_release)"
         uses: changesets/action@v1
         with:
           version: pnpm run version
@@ -184,7 +198,7 @@ jobs:
       matrix:
         package: ${{ fromJSON(needs.release.outputs.publishedPackages) }}
     env:
-      IMAGE_TAG: ${{ inputs.devnet_tag_suffix && needs.branch-mapping.outputs.environment == 'devnet' && format('{0}-develop.{1}', matrix.package.version, github.run_number) || matrix.package.version }}
+      IMAGE_TAG: ${{ (inputs.devnet_tag_suffix && !inputs.devnet_snapshot_release && needs.branch-mapping.outputs.environment == 'devnet') && format('{0}-develop.{1}', matrix.package.version, github.run_number) || matrix.package.version }}
     steps:
       - name: Set image name
         id: set-image-name
@@ -221,7 +235,7 @@ jobs:
       matrix:
         package: ${{ fromJSON(needs.release.outputs.publishedPackages) }}
     env:
-      IMAGE_TAG: ${{ inputs.devnet_tag_suffix && needs.branch-mapping.outputs.environment == 'devnet' && format('{0}-develop.{1}', matrix.package.version, github.run_number) || matrix.package.version }}
+      IMAGE_TAG: ${{ (inputs.devnet_tag_suffix && !inputs.devnet_snapshot_release && needs.branch-mapping.outputs.environment == 'devnet') && format('{0}-develop.{1}', matrix.package.version, github.run_number) || matrix.package.version }}
     steps:
       - name: Set image name # Duplicated from release-docker job due to matrix strategy limitations
         id: set-image-name
