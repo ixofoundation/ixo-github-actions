@@ -135,39 +135,36 @@ jobs:
       # merge, changesets/action's own hasChangesets check filters out every pending
       # changeset already listed in pre.json's "changesets" array as consumed by the
       # other branch's prerelease cycle, and silently skips straight to publish with
-      # nothing to release. Strip it here, before changesets/action runs, whenever
-      # its tag doesn't match the current branch, and push that removal directly so
-      # a polluted run just self-heals into a second clean run instead of no-op'ing.
-      # Sets `clean=true` when it's safe for this run to release (no pre.json, or a
-      # pre.json that genuinely belongs to this branch). Sets `clean=false` only when
-      # it just deleted and pushed a stray pre.json -- that push starts a fresh CI
-      # run which will see `clean=true` and do the actual release; THIS run stops
-      # here since changesets/action would otherwise misread the leftover state.
+      # nothing to release. Strip it here, before changesets/action runs, whenever its
+      # tag doesn't match the current branch.
+      #
+      # The commit+push below is only to persist the fix for future checkouts of this
+      # branch -- it is NOT what unblocks this run. Pushes made with the job's default
+      # GITHUB_TOKEN are deliberately excluded by GitHub from triggering new `push`
+      # workflow runs (anti-loop protection), so a "strip, push, and wait for a second
+      # clean run" design silently never re-triggers. Instead, changesets/action always
+      # runs immediately below, in this same job, against the already-fixed local
+      # checkout -- it doesn't need to wait for the push to land anywhere.
       - name: "Strip stray changesets pre-release flag"
-        id: strip-pre
         run: |
           if [ ! -f .changeset/pre.json ]; then
-            echo "clean=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
           PRE_TAG=$(node -p "require('./.changeset/pre.json').tag")
           if [ "$PRE_TAG" = "$GITHUB_REF_NAME" ]; then
-            echo "clean=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          echo "::notice::.changeset/pre.json (tag: $PRE_TAG) doesn't belong on branch $GITHUB_REF_NAME; removing it and re-triggering a clean run"
+          echo "::notice::.changeset/pre.json (tag: $PRE_TAG) doesn't belong on branch $GITHUB_REF_NAME; removing it"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git rm .changeset/pre.json
           git commit -m "chore: strip stray changesets pre-release flag"
           git push origin HEAD:"$GITHUB_REF_NAME"
-          echo "clean=false" >> "$GITHUB_OUTPUT"
 
       - name: "Create Release Pull Request"
         id: changeset
-        if: steps.strip-pre.outputs.clean == 'true'
         uses: changesets/action@v1
         with:
           version: pnpm run version
